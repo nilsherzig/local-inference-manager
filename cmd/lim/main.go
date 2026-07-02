@@ -27,6 +27,7 @@ import (
 func main() {
 	cfgPath := flag.String("config", "config.yaml", "path to the YAML config file")
 	showLlamaLogs := flag.Bool("show-llama-logs", false, "mirror each instance's stdout/stderr to this process, prefixed with [model]")
+	preload := flag.Bool("preload", true, "download and validate every configured model at startup, before serving")
 	flag.Parse()
 
 	cfg, err := config.Load(*cfgPath)
@@ -50,6 +51,14 @@ func main() {
 		log.Println("config: streaming llama-server logs to stdout/stderr")
 	}
 	mgr := manager.New(cfg, &publisher{bus: bus, mets: mets, cfg: cfg}, mgrOpts...)
+
+	// Download/validate all models before serving, so downloads are visible up
+	// front instead of blocking the first user request.
+	if *preload {
+		log.Printf("preload: checking %d configured model(s) before serving", len(cfg.Models))
+		mgr.Preload(cfg.ModelNames())
+		log.Println("preload: all models ready")
+	}
 
 	mux := http.NewServeMux()
 

@@ -112,3 +112,30 @@ func TestNoModels(t *testing.T) {
 		t.Errorf("expected error for no models")
 	}
 }
+
+func TestHFRepo(t *testing.T) {
+	yaml := `
+models:
+  hf:
+    cmd: "llama-server --port ${PORT} -hf unsloth/gemma:Q4_K_M"
+  local:
+    cmd: "llama-server --port ${PORT} -m /models/gemma.gguf"
+`
+	c, err := Load(writeTemp(t, yaml))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Positive: -hf value is extracted.
+	if repo, ok := c.HFRepo("hf"); !ok || repo != "unsloth/gemma:Q4_K_M" {
+		t.Errorf("HFRepo(hf) = %q, %v; want unsloth/gemma:Q4_K_M, true", repo, ok)
+	}
+	// Negative: a local model has no repo.
+	if repo, ok := c.HFRepo("local"); ok {
+		t.Errorf("HFRepo(local) = %q, %v; want ok=false", repo, ok)
+	}
+	// Negative: unknown model.
+	if _, ok := c.HFRepo("nope"); ok {
+		t.Errorf("HFRepo(nope) should report ok=false")
+	}
+}

@@ -135,6 +135,26 @@ func (c *Config) Args(canonical, port string) ([]string, error) {
 	return fields, nil
 }
 
+// HFRepo returns the HuggingFace repo[:quant] a model downloads, parsed from its
+// cmd (-hf / -hfr / --hf-repo). ok is false when the model loads from a local
+// path or url instead, so preload can skip cache detection for it.
+func (c *Config) HFRepo(canonical string) (repo string, ok bool) {
+	m, exists := c.Models[canonical]
+	if !exists {
+		return "", false
+	}
+	fields := strings.Fields(m.Cmd)
+	for i, f := range fields {
+		switch f {
+		case "-hf", "-hfr", "--hf-repo":
+			if i+1 < len(fields) {
+				return fields[i+1], true
+			}
+		}
+	}
+	return "", false
+}
+
 // ModelNames returns the canonical model names, unsorted.
 func (c *Config) ModelNames() []string {
 	names := make([]string, 0, len(c.Models))

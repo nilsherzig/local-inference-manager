@@ -9,7 +9,10 @@
 - Do you happen to be a member of the permanent underclass (less than 500GB VRAM)?
 - Would you like to keep different models ready to load on demand and have them unload after some idle time? 
 
-https://github.com/user-attachments/assets/cb982477-e22e-4d33-af51-fdff166d10c6
+
+https://github.com/user-attachments/assets/3cac1f51-e293-4643-ab8c-c203b690d7e4
+
+In this demo you can see me create a new auth token and send an example request to the proxy. This starts a new llama-server instance, answers my request and creates some logs and metrics while doing so.
 
 ## Features:
 

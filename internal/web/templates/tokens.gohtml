@@ -1,0 +1,39 @@
+{{define "content"}}
+<h1 class="mb-4 text-xl font-semibold">API Tokens</h1>
+{{if .NewToken}}
+<div class="mb-4 rounded-lg border border-amber-600 bg-amber-500/10 p-4">
+  <div class="text-sm text-amber-200">New token "{{.NewName}}" — copy it now, it won't be shown again:</div>
+  <code class="mt-2 block break-all rounded bg-slate-950 p-2 text-sm text-emerald-300">{{.NewToken}}</code>
+</div>
+{{end}}
+<form method="post" action="/tokens" class="mb-6 flex gap-2">
+  <input name="name" placeholder="token name" class="flex-1 rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
+  <button class="rounded bg-sky-600 px-4 py-2 text-sm hover:bg-sky-500">Create</button>
+</form>
+<div class="overflow-x-auto rounded-lg border border-slate-800">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-900 text-left text-slate-400">
+      <tr>
+        <th class="px-3 py-2">Name</th>
+        <th class="px-3 py-2">Prefix</th>
+        <th class="px-3 py-2">Created</th>
+        <th class="px-3 py-2">Status</th>
+        <th class="px-3 py-2"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Tokens}}
+      <tr class="border-t border-slate-800">
+        <td class="px-3 py-2">{{.Name}}</td>
+        <td class="px-3 py-2 font-mono text-xs">{{.Prefix}}…</td>
+        <td class="px-3 py-2 text-slate-400">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+        <td class="px-3 py-2">{{if .Revoked}}<span class="text-rose-400">revoked</span>{{else}}<span class="text-emerald-400">active</span>{{end}}</td>
+        <td class="px-3 py-2 text-right">{{if not .Revoked}}<form method="post" action="/tokens/{{.ID}}/revoke"><button class="text-xs text-rose-400 hover:underline">revoke</button></form>{{end}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="5" class="px-3 py-4 text-slate-500">No tokens yet.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

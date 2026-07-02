@@ -1,0 +1,33 @@
+manager:
+  listen: "127.0.0.1:8080"
+  db_path: "./lim.db"
+  default_ttl: 300 # idle seconds before an instance is stopped
+  health_timeout: 300 # max seconds to wait for /health (cold start + model download)
+  log_requests_body: true # store request/response bodies (grows the DB)
+
+# Each model carries its own full llama-server command line. There are no macros:
+# to add a model, copy a whole block and edit it. ${PORT} is the only
+# substitution — the manager assigns a free port per instance.
+models:
+  gemma-4-e4b:
+    cmd: |
+      llama-server
+      --host 127.0.0.1
+      --port ${PORT}
+      -ngl 99
+      --jinja
+      --metrics
+      -fa on
+      --cache-type-k q8_0
+      --cache-type-v q8_0
+      --cache-reuse 256
+      --no-mmap
+      --spec-type draft-mtp
+      -hf unsloth/gemma-4-E4B-it-qat-GGUF:UD-Q4_K_XL
+      --spec-draft-n-max 4
+      --ctx-size 8000
+    ttl: 300
+    aliases:
+      - gemma
+      - gemma-4
+      - gemma-4-e4b-it

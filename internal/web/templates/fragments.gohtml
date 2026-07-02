@@ -1,0 +1,44 @@
+{{define "instanceStatus"}}{{if .Running}}
+<div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+  <div class="flex items-center justify-between">
+    <div>
+      <div class="text-lg font-semibold">{{.Model}}</div>
+      <div class="text-sm text-slate-400">state: {{.State}} · port {{.Port}} · up {{printf "%.0f" .Uptime.Seconds}}s</div>
+    </div>
+    <span class="inline-flex items-center rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-300">{{.State}}</span>
+  </div>
+  {{if .Logs}}<pre class="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-2 text-xs text-slate-400">{{.Logs}}</pre>{{end}}
+</div>
+{{else}}
+<div class="rounded-lg border border-slate-800 bg-slate-900 p-4 text-slate-400">No instance running.</div>
+{{end}}{{end}}
+
+{{define "queueBadge"}}<span class="inline-flex items-center rounded-full bg-slate-800 px-3 py-1 text-sm">Queue: {{.}}</span>{{end}}
+
+{{define "playgroundResult"}}<div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+  {{if .Err}}
+  <div class="rounded border border-rose-800 bg-rose-950/40 px-3 py-2 text-sm text-rose-300">{{.Err}}</div>
+  {{else}}
+  <div class="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+    <span>model {{.Model}}</span>
+    <span>{{.WallMs}}ms wall</span>
+    <span>in {{.PromptN}} tok @ {{printf "%.1f" .PromptPerSec}} tok/s</span>
+    <span>out {{.PredictedN}} tok @ {{printf "%.1f" .PredictedPerSec}} tok/s</span>
+  </div>
+  <div class="whitespace-pre-wrap rounded bg-slate-950 p-3 text-sm text-slate-100">{{.Answer}}</div>
+  {{end}}
+</div>{{end}}
+
+{{define "requestRow"}}<a href="/requests/{{.ID}}" class="block border-b border-slate-800 px-3 py-2 hover:bg-slate-800/50">
+  <div class="flex items-center justify-between text-sm">
+    <span class="font-medium">{{.Model}}</span>
+    <span class="text-slate-400">{{.CreatedAt.Format "15:04:05"}}</span>
+  </div>
+  <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+    <span>status {{.Status}}</span>
+    <span>{{.WallMs}}ms</span>
+    <span>in {{.PromptN}} tok</span>
+    <span>out {{.PredictedN}} tok</span>
+    <span>{{printf "%.1f" .PredictedPerSec}} tok/s</span>
+  </div>
+</a>{{end}}

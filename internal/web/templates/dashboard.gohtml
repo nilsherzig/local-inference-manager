@@ -1,0 +1,19 @@
+{{define "content"}}
+<div hx-ext="sse" sse-connect="/events">
+  <div class="grid gap-4 md:grid-cols-3">
+    <div id="instance-status" class="md:col-span-2" sse-swap="instances">
+      {{template "instanceStatus" .Snapshot}}
+    </div>
+    <div class="flex items-start">
+      <span id="queue-badge" sse-swap="queue">{{template "queueBadge" .QueueDepth}}</span>
+    </div>
+  </div>
+
+  <h2 class="mb-2 mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">Live request log</h2>
+  <div class="rounded-lg border border-slate-800 bg-slate-900">
+    <div id="request-log" sse-swap="requests" hx-swap="afterbegin">
+      {{range .Recent}}{{template "requestRow" .}}{{else}}<div class="px-3 py-4 text-sm text-slate-500">No requests yet.</div>{{end}}
+    </div>
+  </div>
+</div>
+{{end}}

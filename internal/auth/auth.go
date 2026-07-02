@@ -39,8 +39,8 @@ func Middleware(tokens store.TokenStore) func(http.Handler) http.Handler {
 }
 
 // TokenID returns the authenticated token ID from the context, if any.
-func TokenID(ctx context.Context) *uint {
-	if v, ok := ctx.Value(ctxKey{}).(uint); ok {
+func TokenID(ctx context.Context) *string {
+	if v, ok := ctx.Value(ctxKey{}).(string); ok {
 		return &v
 	}
 	return nil

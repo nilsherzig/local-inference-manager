@@ -57,7 +57,7 @@ func TestRequestLogSaveRecentGet(t *testing.T) {
 	if err := s.Save(log); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	if log.ID == 0 {
+	if log.ID == "" {
 		t.Errorf("id not populated after save")
 	}
 
@@ -78,7 +78,73 @@ func TestRequestLogSaveRecentGet(t *testing.T) {
 	}
 
 	// Negative: missing id resolves to nil.
-	if got, _ := s.Get(9999); got != nil {
+	if got, _ := s.Get("no-such-id"); got != nil {
 		t.Errorf("missing log should be nil: %+v", got)
+	}
+}
+
+func TestTokenGet(t *testing.T) {
+	s := open(t)
+	_, tok, _ := s.Create("ci")
+
+	got, err := s.Token(tok.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil || got.Name != "ci" {
+		t.Errorf("Token(%q) = %+v", tok.ID, got)
+	}
+	// Negative: unknown id resolves to nil.
+	if got, _ := s.Token("no-such-id"); got != nil {
+		t.Errorf("unknown token id should be nil: %+v", got)
+	}
+}
+
+func TestStatsByToken(t *testing.T) {
+	s := open(t)
+	id := "token-1"
+	other := "token-2"
+
+	// Two requests for token 1, one for token 2, one with no token.
+	for _, l := range []*store.RequestLog{
+		{Model: "gemma", TokenID: &id, PromptN: 10, PredictedN: 5, CacheN: 100},
+		{Model: "gemma", TokenID: &id, PromptN: 20, PredictedN: 7, CacheN: 200},
+		{Model: "gemma", TokenID: &other, PromptN: 99, PredictedN: 99, CacheN: 99},
+		{Model: "gemma", PromptN: 1, PredictedN: 1},
+	} {
+		if err := s.Save(l); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	st, err := s.StatsByToken(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Requests != 2 {
+		t.Errorf("requests = %d, want 2", st.Requests)
+	}
+	if st.PromptTokens != 30 || st.PredictedTokens != 12 || st.CacheTokens != 300 {
+		t.Errorf("sums wrong: %+v", st)
+	}
+	if st.LastUsed == nil {
+		t.Errorf("last used should be set")
+	}
+
+	recent, err := s.RecentByToken(id, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recent) != 2 {
+		t.Errorf("recent for token = %d rows, want 2", len(recent))
+	}
+
+	// Negative: a token with no requests yields zeroes and a nil LastUsed.
+	empty, err := s.StatsByToken("unused-token")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if empty.Requests != 0 || empty.PromptTokens != 0 || empty.LastUsed != nil {
+		t.Errorf("empty stats should be zero/nil: %+v", empty)
 	}
 }

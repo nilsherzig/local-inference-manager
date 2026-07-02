@@ -92,7 +92,7 @@ func (p *Proxy) OpenAI(w http.ResponseWriter, r *http.Request) {
 }
 
 // record persists the request log, updates metrics and publishes a live event.
-func (p *Proxy) record(model, endpoint string, tokenID *uint, status int, start time.Time, reqBody, respBody []byte, contentType string) {
+func (p *Proxy) record(model, endpoint string, tokenID *string, status int, start time.Time, reqBody, respBody []byte, contentType string) {
 	st := extractStats(respBody, contentType)
 	wall := time.Since(start)
 

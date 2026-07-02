@@ -1,0 +1,39 @@
+{{define "content"}}
+<a href="/tokens" class="text-sm text-sky-400 hover:underline">&larr; back</a>
+<h1 class="mt-2 text-xl font-semibold">Token: {{.Token.Name}}</h1>
+<div class="mt-1 text-sm text-slate-400">
+  <span class="font-mono">{{.Token.Prefix}}…</span>
+  · created {{.Token.CreatedAt.Format "2006-01-02 15:04"}}
+  · {{if .Token.Revoked}}<span class="text-rose-400">revoked</span>{{else}}<span class="text-emerald-400">active</span>{{end}}
+</div>
+
+<div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+  <div class="rounded-lg border border-slate-800 bg-slate-900 p-3">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Requests</div>
+    <div class="mt-1 text-lg font-semibold">{{.Stats.Requests}}</div>
+  </div>
+  <div class="rounded-lg border border-slate-800 bg-slate-900 p-3">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Prompt tokens</div>
+    <div class="mt-1 text-lg font-semibold">{{.Stats.PromptTokens}}</div>
+  </div>
+  <div class="rounded-lg border border-slate-800 bg-slate-900 p-3">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Generated tokens</div>
+    <div class="mt-1 text-lg font-semibold">{{.Stats.PredictedTokens}}</div>
+  </div>
+  <div class="rounded-lg border border-slate-800 bg-slate-900 p-3">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Cache tokens</div>
+    <div class="mt-1 text-lg font-semibold">{{.Stats.CacheTokens}}</div>
+  </div>
+</div>
+<div class="mt-2 text-sm text-slate-400">
+  last used: {{if .Stats.LastUsed}}{{.Stats.LastUsed.Format "2006-01-02 15:04:05"}}{{else}}never{{end}}
+</div>
+
+<h2 class="mb-2 mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">Recent requests</h2>
+<div class="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900">
+  <table class="w-full text-sm">
+    <thead>{{template "requestTableHead"}}</thead>
+    <tbody>{{range .Recent}}{{template "requestRow" .}}{{else}}<tr><td colspan="8" class="px-3 py-4 text-sm text-slate-500">No requests yet.</td></tr>{{end}}</tbody>
+  </table>
+</div>
+{{end}}

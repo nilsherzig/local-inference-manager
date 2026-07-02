@@ -57,12 +57,16 @@ type memLogStore struct {
 func (m *memLogStore) Save(l *store.RequestLog) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	l.ID = uint(len(m.logs) + 1)
+	l.ID = fmt.Sprintf("req-%d", len(m.logs)+1)
 	m.logs = append(m.logs, *l)
 	return nil
 }
-func (m *memLogStore) Recent(int) ([]store.RequestLog, error) { return m.logs, nil }
-func (m *memLogStore) Get(id uint) (*store.RequestLog, error) { return nil, nil }
+func (m *memLogStore) Recent(int) ([]store.RequestLog, error)   { return m.logs, nil }
+func (m *memLogStore) Get(id string) (*store.RequestLog, error) { return nil, nil }
+func (m *memLogStore) StatsByToken(string) (store.TokenStats, error) {
+	return store.TokenStats{}, nil
+}
+func (m *memLogStore) RecentByToken(string, int) ([]store.RequestLog, error) { return nil, nil }
 func (m *memLogStore) count() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()

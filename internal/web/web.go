@@ -13,7 +13,6 @@ import (
 	"log"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -65,7 +64,7 @@ func New(cfg *config.Config, mgr *manager.Manager, tokens store.TokenStore, logs
 	}
 	base := []string{"templates/layout.gohtml", "templates/fragments.gohtml"}
 	pages := map[string]*template.Template{}
-	for _, p := range []string{"dashboard", "instances", "tokens", "playground", "request_detail"} {
+	for _, p := range []string{"dashboard", "instances", "tokens", "token_detail", "playground", "request_detail"} {
 		files := append(append([]string{}, base...), "templates/"+p+".gohtml")
 		pages[p] = template.Must(template.New("").Funcs(fm).ParseFS(content, files...))
 	}
@@ -88,6 +87,7 @@ func (s *Server) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /instances/stop", s.stopInstance)
 	mux.HandleFunc("GET /tokens", s.tokensPage)
 	mux.HandleFunc("POST /tokens", s.createToken)
+	mux.HandleFunc("GET /tokens/{id}", s.tokenDetail)
 	mux.HandleFunc("POST /tokens/{id}/revoke", s.revokeToken)
 	mux.HandleFunc("GET /playground", s.playground)
 	mux.HandleFunc("POST /playground", s.runPlayground)
@@ -194,13 +194,25 @@ func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) revokeToken(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseUint(r.PathValue("id"), 10, 64)
-	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
+func (s *Server) tokenDetail(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	tok, err := s.tokens.Token(id)
+	if err != nil || tok == nil {
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	_ = s.tokens.Revoke(uint(id))
+	stats, _ := s.logs.StatsByToken(id)
+	recent, _ := s.logs.RecentByToken(id, 50)
+	s.render(w, "token_detail", map[string]any{
+		"Active": "tokens",
+		"Token":  tok,
+		"Stats":  stats,
+		"Recent": recent,
+	})
+}
+
+func (s *Server) revokeToken(w http.ResponseWriter, r *http.Request) {
+	_ = s.tokens.Revoke(r.PathValue("id"))
 	http.Redirect(w, r, "/tokens", http.StatusSeeOther)
 }
 
@@ -371,12 +383,7 @@ func (s *Server) renderFragment(w http.ResponseWriter, name string, data any) {
 }
 
 func (s *Server) requestDetail(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseUint(r.PathValue("id"), 10, 64)
-	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
-		return
-	}
-	log, err := s.logs.Get(uint(id))
+	log, err := s.logs.Get(r.PathValue("id"))
 	if err != nil || log == nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return

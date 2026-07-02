@@ -11,12 +11,13 @@ import (
 // fakeTokens implements store.TokenStore; only Lookup is exercised.
 type fakeTokens struct {
 	valid string
-	id    uint
+	id    string
 }
 
 func (f *fakeTokens) Create(string) (string, *store.APIToken, error) { return "", nil, nil }
 func (f *fakeTokens) List() ([]store.APIToken, error)                { return nil, nil }
-func (f *fakeTokens) Revoke(uint) error                              { return nil }
+func (f *fakeTokens) Token(string) (*store.APIToken, error)          { return nil, nil }
+func (f *fakeTokens) Revoke(string) error                            { return nil }
 func (f *fakeTokens) Lookup(plaintext string) (*store.APIToken, error) {
 	if plaintext == f.valid {
 		return &store.APIToken{ID: f.id}, nil
@@ -36,7 +37,7 @@ func protectedHandler() http.Handler {
 }
 
 func TestValidTokenPasses(t *testing.T) {
-	h := Middleware(&fakeTokens{valid: "secret", id: 7})(protectedHandler())
+	h := Middleware(&fakeTokens{valid: "secret", id: "tok-7"})(protectedHandler())
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
 	req.Header.Set("Authorization", "Bearer secret")
 	rec := httptest.NewRecorder()

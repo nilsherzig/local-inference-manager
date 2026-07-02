@@ -24,7 +24,7 @@
     <tbody>
       {{range .Tokens}}
       <tr class="border-t border-slate-800">
-        <td class="px-3 py-2">{{.Name}}</td>
+        <td class="px-3 py-2"><a href="/tokens/{{.ID}}" class="text-sky-400 hover:underline">{{.Name}}</a></td>
         <td class="px-3 py-2 font-mono text-xs">{{.Prefix}}…</td>
         <td class="px-3 py-2 text-slate-400">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
         <td class="px-3 py-2">{{if .Revoked}}<span class="text-rose-400">revoked</span>{{else}}<span class="text-emerald-400">active</span>{{end}}</td>

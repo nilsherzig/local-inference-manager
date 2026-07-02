@@ -9,7 +9,7 @@
 - Do you happen to be a member of the permanent underclass (less than 500GB VRAM)?
 - Would you like to keep different models ready to load on demand and have them unload after some idle time? 
 
-![Video Demo](./assets/recording.mp4)
+https://github.com/user-attachments/assets/cb982477-e22e-4d33-af51-fdff166d10c6
 
 ## Features:
 

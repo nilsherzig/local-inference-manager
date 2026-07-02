@@ -13,11 +13,11 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/nilsherzig/local-inference-manager/internal/auth"
 	"github.com/nilsherzig/local-inference-manager/internal/config"
 	"github.com/nilsherzig/local-inference-manager/internal/events"
 	"github.com/nilsherzig/local-inference-manager/internal/manager"
@@ -289,12 +289,10 @@ func (s *Server) revokeToken(w http.ResponseWriter, r *http.Request) {
 // playground renders the Test page: it lists the models and shows a copy-ready
 // curl command. The request itself is run by the user via curl, not in-process.
 func (s *Server) playground(w http.ResponseWriter, r *http.Request) {
-	names := s.cfg.ModelNames()
-	sort.Strings(names)
 	s.render(w, "playground", map[string]any{
-		"Active": "playground",
-		"Models": names,
-		"Listen": s.cfg.Manager.Listen,
+		"Active":  "playground",
+		"Models":  s.cfg.ModelNames(),
+		"BaseURL": auth.BaseURL(r),
 	})
 }
 

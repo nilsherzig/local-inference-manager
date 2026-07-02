@@ -1,1 +1,0 @@
-- instance blocks on the instance page should not switch on reload, fixed ordering

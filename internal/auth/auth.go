@@ -49,6 +49,12 @@ func TokenID(ctx context.Context) *string {
 // tokensURL builds the absolute URL of the token page from the incoming
 // request, so the error tells the caller exactly where to create a token.
 func tokensURL(r *http.Request) string {
+	return BaseURL(r) + "/tokens"
+}
+
+// BaseURL reconstructs the scheme://host the client used to reach us, honoring
+// the X-Forwarded-Proto header set by a TLS-terminating reverse proxy.
+func BaseURL(r *http.Request) string {
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
@@ -56,7 +62,7 @@ func tokensURL(r *http.Request) string {
 	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
 		scheme = p
 	}
-	return scheme + "://" + r.Host + "/tokens"
+	return scheme + "://" + r.Host
 }
 
 func bearer(r *http.Request) string {

@@ -6,6 +6,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -140,5 +141,6 @@ func (c *Config) ModelNames() []string {
 	for n := range c.Models {
 		names = append(names, n)
 	}
+	sort.Strings(names)
 	return names
 }

@@ -24,7 +24,7 @@
 
 <script>
 (function () {
-  const endpoint = "http://{{.Listen}}/v1/chat/completions";
+  const endpoint = "{{.BaseURL}}/v1/chat/completions";
   const model = document.querySelector('[name=model]');
   const prompt = document.querySelector('[name=prompt]');
   const out = document.getElementById('curl-cmd');

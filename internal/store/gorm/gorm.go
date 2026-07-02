@@ -150,10 +150,10 @@ func (s *Store) StatsByToken(tokenID string) (store.TokenStats, error) {
 	return st, nil
 }
 
-func (s *Store) RecentByToken(tokenID string, limit int) ([]store.RequestLog, error) {
+func (s *Store) RecentByToken(tokenID string, limit, offset int) ([]store.RequestLog, error) {
 	var logs []store.RequestLog
 	err := s.db.Where("token_id = ?", tokenID).
-		Order("created_at desc").Limit(limit).Find(&logs).Error
+		Order("created_at desc").Limit(limit).Offset(offset).Find(&logs).Error
 	return logs, err
 }
 

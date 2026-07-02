@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -253,13 +254,30 @@ func (s *Server) tokenDetail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
+	const pageSize = 25
+	page := 1
+	if n, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && n > 1 {
+		page = n
+	}
+	offset := (page - 1) * pageSize
+
 	stats, _ := s.logs.StatsByToken(id)
-	recent, _ := s.logs.RecentByToken(id, 50)
+	// Fetch one extra row to learn whether a next page exists.
+	recent, _ := s.logs.RecentByToken(id, pageSize+1, offset)
+	hasNext := len(recent) > pageSize
+	if hasNext {
+		recent = recent[:pageSize]
+	}
 	s.render(w, "token_detail", map[string]any{
-		"Active": "tokens",
-		"Token":  tok,
-		"Stats":  stats,
-		"Recent": recent,
+		"Active":   "tokens",
+		"Token":    tok,
+		"Stats":    stats,
+		"Recent":   recent,
+		"Page":     page,
+		"PrevPage": page - 1,
+		"NextPage": page + 1,
+		"HasPrev":  page > 1,
+		"HasNext":  hasNext,
 	})
 }
 

@@ -131,7 +131,7 @@ func TestStatsByToken(t *testing.T) {
 		t.Errorf("last used should be set")
 	}
 
-	recent, err := s.RecentByToken(id, 10)
+	recent, err := s.RecentByToken(id, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

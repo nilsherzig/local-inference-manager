@@ -110,8 +110,15 @@ func (f *fakeLogStore) Get(string) (*store.RequestLog, error)  { return f.get, n
 func (f *fakeLogStore) StatsByToken(string) (store.TokenStats, error) {
 	return f.stats, nil
 }
-func (f *fakeLogStore) RecentByToken(string, int) ([]store.RequestLog, error) {
-	return f.recent, nil
+func (f *fakeLogStore) RecentByToken(_ string, limit, offset int) ([]store.RequestLog, error) {
+	if offset >= len(f.recent) {
+		return nil, nil
+	}
+	end := offset + limit
+	if end > len(f.recent) {
+		end = len(f.recent)
+	}
+	return f.recent[offset:end], nil
 }
 
 func testConfig(t *testing.T) *config.Config {
@@ -302,6 +309,43 @@ func TestTokenDetailShowsStats(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("token detail missing %q:\n%s", want, body)
 		}
+	}
+}
+
+func TestTokenDetailPaginates(t *testing.T) {
+	tokens := newFakeTokenStore()
+	_, tok, _ := tokens.Create("ci")
+	rows := make([]store.RequestLog, 30)
+	for i := range rows {
+		rows[i] = store.RequestLog{ID: fmt.Sprintf("req-%d", i), Model: "gemma", Status: 200}
+	}
+	cfg := testConfig(t)
+	s := New(cfg, manager.New(cfg, nil), tokens, &fakeLogStore{recent: rows}, nil)
+
+	render := func(page string) string {
+		req := httptest.NewRequest(http.MethodGet, "/tokens/"+tok.ID+"?page="+page, nil)
+		req.SetPathValue("id", tok.ID)
+		rec := httptest.NewRecorder()
+		s.tokenDetail(rec, req)
+		return rec.Body.String()
+	}
+
+	// Page 1 of 30 rows (page size 25): a next page exists, no previous page.
+	p1 := render("1")
+	if !strings.Contains(p1, "Older →") {
+		t.Errorf("page 1 should offer an older page")
+	}
+	if strings.Contains(p1, "← Newer") {
+		t.Errorf("page 1 should not offer a newer page")
+	}
+
+	// Page 2 holds the remaining 5 rows: previous page exists, no next page.
+	p2 := render("2")
+	if !strings.Contains(p2, "← Newer") {
+		t.Errorf("page 2 should offer a newer page")
+	}
+	if strings.Contains(p2, "Older →") {
+		t.Errorf("page 2 should not offer an older page")
 	}
 }
 

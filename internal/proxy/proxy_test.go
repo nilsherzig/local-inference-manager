@@ -66,7 +66,7 @@ func (m *memLogStore) Get(id string) (*store.RequestLog, error) { return nil, ni
 func (m *memLogStore) StatsByToken(string) (store.TokenStats, error) {
 	return store.TokenStats{}, nil
 }
-func (m *memLogStore) RecentByToken(string, int) ([]store.RequestLog, error) { return nil, nil }
+func (m *memLogStore) RecentByToken(string, int, int) ([]store.RequestLog, error) { return nil, nil }
 func (m *memLogStore) count() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()

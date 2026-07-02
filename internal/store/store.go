@@ -63,6 +63,7 @@ type RequestLogStore interface {
 	Get(id string) (*RequestLog, error)
 	// StatsByToken aggregates all requests made with a token.
 	StatsByToken(tokenID string) (TokenStats, error)
-	// RecentByToken returns a token's most recent requests.
-	RecentByToken(tokenID string, limit int) ([]RequestLog, error)
+	// RecentByToken returns a token's most recent requests, newest first,
+	// skipping offset rows (for pagination).
+	RecentByToken(tokenID string, limit, offset int) ([]RequestLog, error)
 }

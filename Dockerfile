@@ -19,6 +19,11 @@ FROM ghcr.io/ggml-org/llama.cpp:server-vulkan
 
 COPY --from=builder /lim /usr/local/bin/lim
 
+# The upstream image ships llama-server's shared libs in /app and relies on its
+# WORKDIR=/app entrypoint to find them. lim starts /app/llama-server as a
+# subprocess from a different CWD, so the dynamic linker needs /app spelled out.
+ENV LD_LIBRARY_PATH=/app
+
 WORKDIR /data
 
 EXPOSE 8080

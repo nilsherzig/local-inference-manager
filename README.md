@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/cb982477-e22e-4d33-af51-fdff166d10c6
 
 Please check [example config](./config.example.yaml) for more details.
 
-Here is a config for qwen3.6 27b, as you can see this project is truely just a manger and doesnt try to replace anything:
+Here is a config for qwen3.6 27b, as you can see this project is truely just a manager and doesnt try to replace anything. Feel free to use the most cursed llama-server args someone told you in a dream:
 
 ```
 models:

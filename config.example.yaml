@@ -12,20 +12,41 @@ models:
   gemma-4-e4b:
     cmd: |
       llama-server
-      --host 127.0.0.1
-      --port ${PORT}
-      -ngl 99
-      --jinja
-      --metrics
-      -fa on
+      --cache-reuse 256
       --cache-type-k q8_0
       --cache-type-v q8_0
-      --cache-reuse 256
+      --ctx-size 90000
+      --host 127.0.0.1
+      --jinja
+      --metrics
       --no-mmap
+      --port ${PORT}
+      -fa on
       -hf unsloth/gemma-4-E4B-it-qat-GGUF:UD-Q4_K_XL
-      --ctx-size 30000
+      -ngl 99
     ttl: 300
     aliases:
       - gemma
       - gemma-4
       - gemma-4-e4b-it
+
+  gemma-4-12b:
+    cmd: |
+      llama-server
+      --cache-reuse 256
+      --cache-type-k q8_0
+      --cache-type-v q8_0
+      --ctx-size 65536
+      --host 127.0.0.1
+      --jinja
+      --metrics
+      --no-mmap
+      --port ${PORT}
+      --spec-type draft-mtp
+      -fa on
+      -hf unsloth/gemma-4-12b-it-GGUF:Q4_K_M
+      -ngl 99
+    ttl: 300
+    aliases:
+      - gemma-12b
+      - gemma-4-12b-it

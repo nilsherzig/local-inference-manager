@@ -54,6 +54,12 @@ func New() *Metrics {
 	return m
 }
 
+// RegisterTokenStats adds a scrape-time collector that exposes each API token's
+// lifetime stats (the figures shown at the top of the token page).
+func (m *Metrics) RegisterTokenStats(src TokenStatsSource) {
+	m.reg.MustRegister(newTokenCollector(src))
+}
+
 // RecordRequest records one proxied request.
 func (m *Metrics) RecordRequest(model string, status, promptN, predictedN int, dur time.Duration) {
 	m.requests.WithLabelValues(model, fmt.Sprintf("%d", status)).Inc()

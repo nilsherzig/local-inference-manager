@@ -43,6 +43,7 @@ func main() {
 
 	bus := events.New()
 	mets := metrics.New()
+	mets.RegisterTokenStats(db)
 	var mgrOpts []manager.Option
 	if *showLlamaLogs {
 		mgrOpts = append(mgrOpts, manager.WithLogStreaming())

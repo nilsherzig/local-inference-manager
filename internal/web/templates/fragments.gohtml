@@ -3,7 +3,7 @@
   <div class="flex items-center justify-between">
     <div>
       <div class="text-lg font-semibold">{{.Model}}</div>
-      <div class="text-sm text-slate-400">state: {{.State}} · port {{.Port}} · up {{printf "%.0f" .Uptime.Seconds}}s</div>
+      <div class="text-sm text-slate-400">state: {{.State}} · port {{.Port}} · up {{humanDur .Uptime}}</div>
     </div>
     <span class="inline-flex items-center rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-300">{{.State}}</span>
   </div>

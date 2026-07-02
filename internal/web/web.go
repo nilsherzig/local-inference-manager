@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/nilsherzig/local-inference-manager/internal/config"
 	"github.com/nilsherzig/local-inference-manager/internal/events"
@@ -40,6 +41,19 @@ func New(cfg *config.Config, mgr *manager.Manager, tokens store.TokenStore, logs
 	fm := template.FuncMap{
 		"join": strings.Join,
 		"secs": func(ms int64) float64 { return float64(ms) / 1000 },
+		// humanDur renders an uptime as the largest sensible unit (s/m/h/d).
+		"humanDur": func(d time.Duration) string {
+			switch {
+			case d < time.Minute:
+				return fmt.Sprintf("%ds", int(d.Seconds()))
+			case d < time.Hour:
+				return fmt.Sprintf("%dm", int(d.Minutes()))
+			case d < 24*time.Hour:
+				return fmt.Sprintf("%dh", int(d.Hours()))
+			default:
+				return fmt.Sprintf("%dd", int(d.Hours()/24))
+			}
+		},
 		"pct": func(num, den int) float64 {
 			if den == 0 {
 				return 0

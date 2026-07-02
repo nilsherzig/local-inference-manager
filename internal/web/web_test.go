@@ -447,7 +447,7 @@ func TestTokenDetailUnknownToken(t *testing.T) {
 	}
 }
 
-func TestPlaygroundPageListsModels(t *testing.T) {
+func TestPlaygroundPageShowsCurl(t *testing.T) {
 	s := newTestServer(t, newFakeTokenStore())
 	req := httptest.NewRequest(http.MethodGet, "/playground", nil)
 	rec := httptest.NewRecorder()
@@ -455,13 +455,13 @@ func TestPlaygroundPageListsModels(t *testing.T) {
 	s.playground(rec, req)
 
 	body := rec.Body.String()
-	if !strings.Contains(body, `value="gemma"`) {
-		t.Errorf("page missing model option: %q", body)
-	}
 	if !strings.Contains(body, ">Test<") {
 		t.Errorf("page missing heading")
 	}
 	if !strings.Contains(body, "/v1/chat/completions") {
-		t.Errorf("page missing equivalent curl command")
+		t.Errorf("page missing curl command")
+	}
+	if !strings.Contains(body, "gemma") {
+		t.Errorf("curl missing model name: %q", body)
 	}
 }

@@ -288,13 +288,25 @@ func (s *Server) revokeToken(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/tokens", http.StatusSeeOther)
 }
 
-// playground renders the Test page: it lists the models and shows a copy-ready
-// curl command. The request itself is run by the user via curl, not in-process.
+// playground renders the Test page: a copy-ready curl example. The request
+// itself is run by the user via curl, not in-process.
 func (s *Server) playground(w http.ResponseWriter, r *http.Request) {
+	model := "MODEL_NAME"
+	if names := s.cfg.ModelNames(); len(names) > 0 {
+		model = names[0]
+	}
+	body, _ := json.Marshal(map[string]any{
+		"model":    model,
+		"messages": []map[string]string{{"role": "user", "content": "Hello! Briefly introduce yourself."}},
+		"stream":   false,
+	})
+	curl := fmt.Sprintf("curl %s/v1/chat/completions \\\n"+
+		"  -H 'Authorization: Bearer $LIM_TOKEN' \\\n"+
+		"  -H 'Content-Type: application/json' \\\n"+
+		"  -d '%s'", auth.BaseURL(r), strings.ReplaceAll(string(body), "'", "'\\''"))
 	s.render(w, "playground", map[string]any{
-		"Active":  "playground",
-		"Models":  s.cfg.ModelNames(),
-		"BaseURL": auth.BaseURL(r),
+		"Active": "playground",
+		"Curl":   curl,
 	})
 }
 

@@ -22,9 +22,7 @@ models:
       --cache-type-v q8_0
       --cache-reuse 256
       --no-mmap
-      --spec-type draft-mtp
       -hf unsloth/gemma-4-E4B-it-qat-GGUF:UD-Q4_K_XL
-      --spec-draft-n-max 4
       --ctx-size 30000
     ttl: 300
     aliases:

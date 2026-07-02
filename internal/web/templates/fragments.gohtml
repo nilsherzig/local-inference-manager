@@ -7,11 +7,12 @@
     </div>
     <span class="inline-flex items-center rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-300">{{.State}}</span>
   </div>
-  {{if .Logs}}<pre class="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-2 text-xs text-slate-400">{{.Logs}}</pre>{{end}}
 </div>
 {{else}}
 <div class="rounded-lg border border-slate-800 bg-slate-900 p-4 text-slate-400">No instance running.</div>
 {{end}}{{end}}
+
+{{define "instanceLogs"}}{{if .Running}}<pre class="max-h-96 overflow-auto whitespace-pre-wrap p-2 text-xs text-slate-400">{{.Logs}}</pre>{{else}}<div class="p-2 text-sm text-slate-500">No instance running.</div>{{end}}{{end}}
 
 {{define "queueBadge"}}<span class="inline-flex items-center rounded-full bg-slate-800 px-3 py-1 text-sm">Queue: {{.}}</span>{{end}}
 

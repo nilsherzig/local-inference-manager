@@ -1,6 +1,6 @@
 {{define "content"}}
-<h1 class="mb-4 text-xl font-semibold">Playground</h1>
-<form hx-post="/playground" hx-target="#pg-result" hx-disabled-elt="#pg-run" class="space-y-3">
+<h1 class="mb-4 text-xl font-semibold">Test</h1>
+<form hx-post="/test" hx-target="#pg-result" hx-disabled-elt="#pg-run" class="space-y-3">
   <div>
     <label class="mb-1 block text-sm text-slate-400">Model</label>
     <select name="model" class="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
@@ -18,4 +18,40 @@
   <p class="text-xs text-slate-500">The instance starts on demand; the first query after a swap can take a while.</p>
 </form>
 <div id="pg-result" class="mt-6"></div>
+
+<div class="mt-8">
+  <div class="mb-2 flex items-center justify-between">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Equivalent curl</h2>
+    <button type="button" id="curl-copy" class="text-xs text-sky-400 hover:text-sky-300">Copy</button>
+  </div>
+  <pre id="curl-cmd" class="overflow-x-auto rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs text-slate-300"></pre>
+  <p class="mt-1 text-xs text-slate-500">Replace <code>$LIM_TOKEN</code> with a token from the <a href="/tokens" class="text-sky-400 hover:text-sky-300">Tokens</a> page.</p>
+</div>
+
+<script>
+(function () {
+  const endpoint = "http://{{.Listen}}/v1/chat/completions";
+  const model = document.querySelector('[name=model]');
+  const prompt = document.querySelector('[name=prompt]');
+  const out = document.getElementById('curl-cmd');
+  function render() {
+    const body = JSON.stringify({
+      model: model.value,
+      messages: [{ role: "user", content: prompt.value }],
+      stream: false,
+    });
+    out.textContent =
+      "curl " + endpoint + " \\\n" +
+      "  -H 'Authorization: Bearer $LIM_TOKEN' \\\n" +
+      "  -H 'Content-Type: application/json' \\\n" +
+      "  -d '" + body.replace(/'/g, "'\\''") + "'";
+  }
+  model.addEventListener('change', render);
+  prompt.addEventListener('input', render);
+  document.getElementById('curl-copy').addEventListener('click', function () {
+    navigator.clipboard.writeText(out.textContent);
+  });
+  render();
+})();
+</script>
 {{end}}

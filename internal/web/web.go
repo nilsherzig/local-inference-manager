@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -83,14 +84,16 @@ func (s *Server) Routes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /{$}", s.dashboard)
 	mux.HandleFunc("GET /instances", s.instances)
+	mux.HandleFunc("GET /instances/logs", s.instanceLogs)
+	mux.HandleFunc("GET /instances/logs.txt", s.instanceLogsText)
 	mux.HandleFunc("POST /instances/{model}/start", s.startInstance)
 	mux.HandleFunc("POST /instances/stop", s.stopInstance)
 	mux.HandleFunc("GET /tokens", s.tokensPage)
 	mux.HandleFunc("POST /tokens", s.createToken)
 	mux.HandleFunc("GET /tokens/{id}", s.tokenDetail)
 	mux.HandleFunc("POST /tokens/{id}/revoke", s.revokeToken)
-	mux.HandleFunc("GET /playground", s.playground)
-	mux.HandleFunc("POST /playground", s.runPlayground)
+	mux.HandleFunc("GET /test", s.playground)
+	mux.HandleFunc("POST /test", s.runPlayground)
 	mux.HandleFunc("GET /requests/{id}", s.requestDetail)
 	mux.HandleFunc("GET /events", s.events)
 }
@@ -101,6 +104,7 @@ type modelStatus struct {
 	Aliases []string
 	TTL     int
 	Active  bool
+	Cmd     string // full llama-server command line (${PORT} unsubstituted)
 }
 
 func (s *Server) modelStatuses() []modelStatus {
@@ -112,6 +116,7 @@ func (s *Server) modelStatuses() []modelStatus {
 			Aliases: s.cfg.Models[name].Aliases,
 			TTL:     s.cfg.TTL(name),
 			Active:  snap.Running && snap.Model == name,
+			Cmd:     strings.TrimSpace(s.cfg.Models[name].Cmd),
 		})
 	}
 	return out
@@ -141,6 +146,25 @@ func (s *Server) instances(w http.ResponseWriter, r *http.Request) {
 		"Models":   s.modelStatuses(),
 		"Snapshot": s.mgr.Snapshot(),
 	})
+}
+
+// instanceLogs renders the live process log fragment for the running instance.
+// The instances page polls this endpoint (htmx) to keep the log fresh.
+func (s *Server) instanceLogs(w http.ResponseWriter, r *http.Request) {
+	s.renderFragment(w, "instanceLogs", s.mgr.Snapshot())
+}
+
+// instanceLogsText serves the current process log as a plain-text snapshot, so
+// the user can open it fullscreen in a browser tab. It does not stream.
+func (s *Server) instanceLogsText(w http.ResponseWriter, r *http.Request) {
+	snap := s.mgr.Snapshot()
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if !snap.Running {
+		fmt.Fprintln(w, "No instance running.")
+		return
+	}
+	fmt.Fprintf(w, "# %s (port %d, %s)\n\n", snap.Model, snap.Port, snap.State)
+	io.WriteString(w, snap.Logs)
 }
 
 func (s *Server) startInstance(w http.ResponseWriter, r *http.Request) {
@@ -234,6 +258,7 @@ func (s *Server) playground(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "playground", map[string]any{
 		"Active": "playground",
 		"Models": names,
+		"Listen": s.cfg.Manager.Listen,
 	})
 }
 

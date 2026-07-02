@@ -359,6 +359,41 @@ func TestDashboardRequestLogRendersRowsAsTable(t *testing.T) {
 	}
 }
 
+func TestInstancesPageShowsConfigAndLogs(t *testing.T) {
+	s := newTestServer(t, newFakeTokenStore(), func(http.ResponseWriter, *http.Request) {})
+	req := httptest.NewRequest(http.MethodGet, "/instances", nil)
+	rec := httptest.NewRecorder()
+
+	s.instances(rec, req)
+
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	// The full llama-server command line from the config must be rendered.
+	if !strings.Contains(body, "llama-server --port ${PORT}") {
+		t.Errorf("instances page missing model config: %q", body)
+	}
+	if !strings.Contains(body, "Live instance logs") || !strings.Contains(body, "/instances/logs.txt") {
+		t.Errorf("instances page missing live logs section: %q", body)
+	}
+}
+
+func TestInstanceLogsTextNoInstance(t *testing.T) {
+	s := newTestServer(t, newFakeTokenStore(), func(http.ResponseWriter, *http.Request) {})
+	req := httptest.NewRequest(http.MethodGet, "/instances/logs.txt", nil)
+	rec := httptest.NewRecorder()
+
+	s.instanceLogsText(rec, req)
+
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/plain") {
+		t.Errorf("content-type = %q, want text/plain", ct)
+	}
+	if !strings.Contains(rec.Body.String(), "No instance running.") {
+		t.Errorf("body = %q, want 'No instance running.'", rec.Body.String())
+	}
+}
+
 func TestTokenDetailShowsStats(t *testing.T) {
 	tokens := newFakeTokenStore()
 	_, tok, _ := tokens.Create("ci")
@@ -414,7 +449,10 @@ func TestPlaygroundPageListsModels(t *testing.T) {
 	if !strings.Contains(body, `value="gemma"`) {
 		t.Errorf("page missing model option: %q", body)
 	}
-	if !strings.Contains(body, "Playground") {
+	if !strings.Contains(body, ">Test<") {
 		t.Errorf("page missing heading")
+	}
+	if !strings.Contains(body, "/v1/chat/completions") {
+		t.Errorf("page missing equivalent curl command")
 	}
 }

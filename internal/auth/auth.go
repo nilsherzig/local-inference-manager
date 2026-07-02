@@ -20,7 +20,7 @@ func Middleware(tokens store.TokenStore) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			raw := bearer(r)
 			if raw == "" {
-				writeError(w, http.StatusUnauthorized, "missing bearer token")
+				writeError(w, http.StatusUnauthorized, "missing bearer token; create one at "+tokensURL(r))
 				return
 			}
 			tok, err := tokens.Lookup(raw)
@@ -29,7 +29,7 @@ func Middleware(tokens store.TokenStore) func(http.Handler) http.Handler {
 				return
 			}
 			if tok == nil {
-				writeError(w, http.StatusUnauthorized, "invalid token")
+				writeError(w, http.StatusUnauthorized, "invalid token; create one at "+tokensURL(r))
 				return
 			}
 			ctx := context.WithValue(r.Context(), ctxKey{}, tok.ID)
@@ -44,6 +44,19 @@ func TokenID(ctx context.Context) *string {
 		return &v
 	}
 	return nil
+}
+
+// tokensURL builds the absolute URL of the token page from the incoming
+// request, so the error tells the caller exactly where to create a token.
+func tokensURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
+		scheme = p
+	}
+	return scheme + "://" + r.Host + "/tokens"
 }
 
 func bearer(r *http.Request) string {

@@ -10,10 +10,13 @@ import (
 
 // timings mirrors the llama-server "timings" object.
 type timings struct {
+	CacheN             int     `json:"cache_n"` // prompt tokens served from cache (not reprocessed)
 	PromptN            int     `json:"prompt_n"`
 	PredictedN         int     `json:"predicted_n"`
 	PromptPerSecond    float64 `json:"prompt_per_second"`
 	PredictedPerSecond float64 `json:"predicted_per_second"`
+	DraftN             int     `json:"draft_n"`          // draft tokens proposed (speculative decoding)
+	DraftNAccepted     int     `json:"draft_n_accepted"` // draft tokens accepted
 }
 
 type llamaResp struct {
@@ -26,10 +29,13 @@ type llamaResp struct {
 
 // stats is the extracted per-request statistics.
 type stats struct {
+	CacheN          int
 	PromptN         int
 	PredictedN      int
 	PromptPerSec    float64
 	PredictedPerSec float64
+	DraftN          int
+	DraftNAccepted  int
 }
 
 // extractStats pulls timings from a proxied response body. It handles both the
@@ -49,10 +55,13 @@ func fromLlamaResp(data []byte) stats {
 	}
 	var s stats
 	if r.Timings != nil {
+		s.CacheN = r.Timings.CacheN
 		s.PromptN = r.Timings.PromptN
 		s.PredictedN = r.Timings.PredictedN
 		s.PromptPerSec = r.Timings.PromptPerSecond
 		s.PredictedPerSec = r.Timings.PredictedPerSecond
+		s.DraftN = r.Timings.DraftN
+		s.DraftNAccepted = r.Timings.DraftNAccepted
 	}
 	if s.PromptN == 0 && r.Usage != nil {
 		s.PromptN = r.Usage.PromptTokens
@@ -74,7 +83,7 @@ func extractStreamStats(body []byte) stats {
 		if payload == "" || payload == "[DONE]" {
 			continue
 		}
-		if s := fromLlamaResp([]byte(payload)); s.PredictedN > 0 || s.PromptN > 0 {
+		if s := fromLlamaResp([]byte(payload)); s.PredictedN > 0 || s.PromptN > 0 || s.CacheN > 0 {
 			last = s
 		}
 	}

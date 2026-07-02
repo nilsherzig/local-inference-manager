@@ -11,9 +11,7 @@
 
   <h2 class="mb-2 mt-6 text-sm font-semibold uppercase tracking-wide text-slate-400">Live request log</h2>
   <div class="rounded-lg border border-slate-800 bg-slate-900">
-    <div id="request-log" sse-swap="requests" hx-swap="afterbegin">
-      {{range .Recent}}{{template "requestRow" .}}{{else}}<div class="px-3 py-4 text-sm text-slate-500">No requests yet.</div>{{end}}
-    </div>
+    <div id="request-log" sse-swap="requests" hx-swap="afterbegin">{{- range .Recent}}{{template "requestRow" .}}{{end -}}</div>
   </div>
 </div>
 {{end}}

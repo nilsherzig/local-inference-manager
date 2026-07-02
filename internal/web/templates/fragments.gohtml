@@ -36,9 +36,11 @@
   </div>
   <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
     <span>status {{.Status}}</span>
-    <span>{{.WallMs}}ms</span>
+    <span>{{printf "%.1f" (secs .WallMs)}}s</span>
     <span>in {{.PromptN}} tok</span>
+    {{if .CacheN}}<span>cache {{.CacheN}} tok</span>{{end}}
     <span>out {{.PredictedN}} tok</span>
     <span>{{printf "%.1f" .PredictedPerSec}} tok/s</span>
+    {{if .DraftN}}<span>draft {{.DraftNAccepted}}/{{.DraftN}} ({{printf "%.0f" (pct .DraftNAccepted .DraftN)}}%)</span>{{end}}
   </div>
 </a>{{end}}

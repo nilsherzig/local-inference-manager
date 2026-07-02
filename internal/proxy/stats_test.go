@@ -14,6 +14,23 @@ func TestExtractStatsNonStream(t *testing.T) {
 	}
 }
 
+func TestExtractStatsCacheAndDraft(t *testing.T) {
+	// A high-cache-hit response with speculative-decoding draft stats.
+	body := `{"timings":{"cache_n":2708,"prompt_n":5,"prompt_ms":50.416,"prompt_per_second":99.17,` +
+		`"predicted_n":279,"predicted_ms":7395.986,"predicted_per_second":37.72,` +
+		`"draft_n":552,"draft_n_accepted":140}}`
+	s := extractStats([]byte(body), "application/json")
+	if s.CacheN != 2708 {
+		t.Errorf("cache_n = %d, want 2708", s.CacheN)
+	}
+	if s.PromptN != 5 || s.PredictedN != 279 {
+		t.Errorf("tokens = %+v", s)
+	}
+	if s.DraftN != 552 || s.DraftNAccepted != 140 {
+		t.Errorf("draft = %d/%d, want 140/552", s.DraftNAccepted, s.DraftN)
+	}
+}
+
 func TestExtractStatsUsageFallback(t *testing.T) {
 	// No timings, but usage present.
 	body := `{"usage":{"prompt_tokens":7,"completion_tokens":3}}`

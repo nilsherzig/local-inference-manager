@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Show a placeholder while the live request log has no rows. Using :empty means
+   it disappears automatically the moment htmx prepends the first SSE row, with
+   no page reload. Requires the container to render with no whitespace when empty. */
+#request-log:empty::before {
+  content: "No requests yet.";
+  display: block;
+  padding: 1rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #64748b; /* slate-500 */
+}

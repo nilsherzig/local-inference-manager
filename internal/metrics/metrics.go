@@ -86,7 +86,10 @@ type CurrentInstance func() (model, baseURL string, ok bool)
 // Handler serves the manager metrics followed by the bundled llama-server
 // metrics of the active instance (relabelled with model="...").
 func (m *Metrics) Handler(current CurrentInstance) http.Handler {
-	own := promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{})
+	// DisableCompression is essential: without it promhttp gzips its own output
+	// and closes the stream, so the bundled instance metrics we append afterwards
+	// would land after the gzip trailer and be lost on a real (gzip) scrape.
+	own := promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{DisableCompression: true})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		own.ServeHTTP(w, r)
 		model, baseURL, ok := current()

@@ -55,6 +55,13 @@ const playgroundTokenName = "playground"
 func New(cfg *config.Config, mgr *manager.Manager, tokens store.TokenStore, logs store.RequestLogStore, bus *events.Bus, chat http.Handler) *Server {
 	fm := template.FuncMap{
 		"join": strings.Join,
+		"secs": func(ms int64) float64 { return float64(ms) / 1000 },
+		"pct": func(num, den int) float64 {
+			if den == 0 {
+				return 0
+			}
+			return float64(num) / float64(den) * 100
+		},
 	}
 	base := []string{"templates/layout.gohtml", "templates/fragments.gohtml"}
 	pages := map[string]*template.Template{}

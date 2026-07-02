@@ -102,10 +102,13 @@ func (p *Proxy) record(model, endpoint string, tokenID *uint, status int, start 
 		TokenID:         tokenID,
 		Status:          status,
 		WallMs:          wall.Milliseconds(),
+		CacheN:          st.CacheN,
 		PromptN:         st.PromptN,
 		PredictedN:      st.PredictedN,
 		PromptPerSec:    st.PromptPerSec,
 		PredictedPerSec: st.PredictedPerSec,
+		DraftN:          st.DraftN,
+		DraftNAccepted:  st.DraftNAccepted,
 	}
 	if p.cfg.Manager.LogRequestsBody {
 		entry.RequestBody = string(reqBody)

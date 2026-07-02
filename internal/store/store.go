@@ -24,10 +24,13 @@ type RequestLog struct {
 	TokenID         *uint
 	Status          int
 	WallMs          int64
+	CacheN          int
 	PromptN         int
 	PredictedN      int
 	PromptPerSec    float64
 	PredictedPerSec float64
+	DraftN          int
+	DraftNAccepted  int
 	RequestBody     string
 	ResponseBody    string
 }

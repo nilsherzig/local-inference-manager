@@ -268,6 +268,37 @@ func TestRunPlaygroundRendersAnswer(t *testing.T) {
 	}
 }
 
+func TestRequestRowShowsSecondsNotMillis(t *testing.T) {
+	s := newTestServer(t, newFakeTokenStore(), func(http.ResponseWriter, *http.Request) {})
+	out := s.fragment("requestRow", &store.RequestLog{Model: "m", Status: 200, WallMs: 1500})
+
+	if !strings.Contains(out, "1.5s") {
+		t.Errorf("row missing seconds: %q", out)
+	}
+	if strings.Contains(out, "1500ms") {
+		t.Errorf("row still shows milliseconds: %q", out)
+	}
+}
+
+// TestDashboardEmptyRequestLogHasNoWhitespace guards the :empty CSS precondition:
+// with no requests the container must render truly empty, otherwise the "No
+// requests yet" placeholder would never disappear on the first live row.
+func TestDashboardEmptyRequestLogHasNoWhitespace(t *testing.T) {
+	s := newTestServer(t, newFakeTokenStore(), func(http.ResponseWriter, *http.Request) {})
+	rec := httptest.NewRecorder()
+
+	s.render(rec, "dashboard", map[string]any{
+		"Active":     "dashboard",
+		"Snapshot":   manager.Snapshot{},
+		"QueueDepth": int64(0),
+		"Recent":     []store.RequestLog{},
+	})
+
+	if !strings.Contains(rec.Body.String(), `hx-swap="afterbegin"></div>`) {
+		t.Error("empty request-log container has inner whitespace; :empty will not match")
+	}
+}
+
 func TestPlaygroundPageListsModels(t *testing.T) {
 	s := newTestServer(t, newFakeTokenStore(), func(http.ResponseWriter, *http.Request) {})
 	req := httptest.NewRequest(http.MethodGet, "/playground", nil)

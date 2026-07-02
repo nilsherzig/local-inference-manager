@@ -5,9 +5,11 @@
   <div>Model: <span class="text-slate-300">{{.Log.Model}}</span></div>
   <div>Endpoint: <span class="text-slate-300">{{.Log.Endpoint}}</span></div>
   <div>Status: {{.Log.Status}}</div>
-  <div>Wall time: {{.Log.WallMs}} ms</div>
+  <div>Wall time: {{printf "%.1f" (secs .Log.WallMs)}} s</div>
   <div>Prompt: {{.Log.PromptN}} tok ({{printf "%.1f" .Log.PromptPerSec}} tok/s)</div>
   <div>Generated: {{.Log.PredictedN}} tok ({{printf "%.1f" .Log.PredictedPerSec}} tok/s)</div>
+  {{if .Log.CacheN}}<div>Cache: {{.Log.CacheN}} tok reused</div>{{end}}
+  {{if .Log.DraftN}}<div>Draft: {{.Log.DraftNAccepted}}/{{.Log.DraftN}} accepted ({{printf "%.0f" (pct .Log.DraftNAccepted .Log.DraftN)}}%)</div>{{end}}
 </div>
 {{if .Log.RequestBody}}
 <h2 class="mb-1 mt-6 text-sm font-semibold text-slate-400">Request body</h2>

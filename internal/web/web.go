@@ -137,7 +137,7 @@ func (s *Server) render(w http.ResponseWriter, page string, data any) {
 }
 
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
-	recent, _ := s.logs.Recent(50)
+	recent, _ := s.logs.Recent(10)
 	snap := s.mgr.Snapshot()
 	s.render(w, "dashboard", map[string]any{
 		"Active":     "dashboard",

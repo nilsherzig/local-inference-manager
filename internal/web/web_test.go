@@ -101,11 +101,12 @@ func (f *fakeTokenStore) Revoke(id string) error {
 type fakeLogStore struct {
 	stats  store.TokenStats
 	recent []store.RequestLog
+	get    *store.RequestLog
 }
 
 func (f *fakeLogStore) Save(*store.RequestLog) error           { return nil }
 func (f *fakeLogStore) Recent(int) ([]store.RequestLog, error) { return f.recent, nil }
-func (f *fakeLogStore) Get(string) (*store.RequestLog, error)  { return nil, nil }
+func (f *fakeLogStore) Get(string) (*store.RequestLog, error)  { return f.get, nil }
 func (f *fakeLogStore) StatsByToken(string) (store.TokenStats, error) {
 	return f.stats, nil
 }
@@ -223,6 +224,34 @@ func TestInstanceLogsTextNoInstance(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "No instance running.") {
 		t.Errorf("body = %q, want 'No instance running.'", rec.Body.String())
+	}
+}
+
+func TestRequestDetailPrettyPrintsJSON(t *testing.T) {
+	cfg := testConfig(t)
+	logs := &fakeLogStore{get: &store.RequestLog{
+		ID:           "r1",
+		RequestBody:  `{"model":"gemma","stream":false}`,
+		ResponseBody: `not json`,
+	}}
+	s := New(cfg, manager.New(cfg, nil), newFakeTokenStore(), logs, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/requests/r1", nil)
+	req.SetPathValue("id", "r1")
+	rec := httptest.NewRecorder()
+	s.requestDetail(rec, req)
+
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	// Valid JSON is indented (a newline + two-space indent before the key).
+	if !strings.Contains(body, "{\n  &#34;model&#34;: &#34;gemma&#34;") {
+		t.Errorf("request body not pretty-printed:\n%s", body)
+	}
+	// Non-JSON is left untouched.
+	if !strings.Contains(body, "not json") {
+		t.Errorf("non-JSON response body should pass through: %s", body)
 	}
 }
 

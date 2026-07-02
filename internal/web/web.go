@@ -4,7 +4,9 @@
 package web
 
 import (
+	"bytes"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -41,6 +43,14 @@ func New(cfg *config.Config, mgr *manager.Manager, tokens store.TokenStore, logs
 	fm := template.FuncMap{
 		"join": strings.Join,
 		"secs": func(ms int64) float64 { return float64(ms) / 1000 },
+		// prettyJSON indents a JSON string; non-JSON input is returned unchanged.
+		"prettyJSON": func(s string) string {
+			var buf bytes.Buffer
+			if err := json.Indent(&buf, []byte(s), "", "  "); err != nil {
+				return s
+			}
+			return buf.String()
+		},
 		// humanDur renders an uptime as the largest sensible unit (s/m/h/d).
 		"humanDur": func(d time.Duration) string {
 			switch {

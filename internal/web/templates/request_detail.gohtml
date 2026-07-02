@@ -13,10 +13,10 @@
 </div>
 {{if .Log.RequestBody}}
 <h2 class="mb-1 mt-6 text-sm font-semibold text-slate-400">Request body</h2>
-<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-3 text-xs">{{.Log.RequestBody}}</pre>
+<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-3 text-xs">{{prettyJSON .Log.RequestBody}}</pre>
 {{end}}
 {{if .Log.ResponseBody}}
 <h2 class="mb-1 mt-4 text-sm font-semibold text-slate-400">Response body</h2>
-<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-3 text-xs">{{.Log.ResponseBody}}</pre>
+<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-3 text-xs">{{prettyJSON .Log.ResponseBody}}</pre>
 {{end}}
 {{end}}

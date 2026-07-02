@@ -1,6 +1,12 @@
-# Build lim on top of the upstream llama.cpp Vulkan server image, which already
-# ships /app/llama-server. lim replaces the image's entrypoint: it manages that
-# binary on demand and proxies OpenAI-compatible requests to it.
+# Build lim on top of the upstream llama.cpp server image, which already ships
+# /app/llama-server. lim replaces the image's entrypoint: it manages that binary
+# on demand and proxies OpenAI-compatible requests to it.
+#
+# Base image is selectable: defaults to the Vulkan server image; override with
+# LLAMA_IMAGE=...:server-cuda to build the CUDA variant. A global ARG (declared
+# before the first FROM) is the only kind usable in a later FROM.
+ARG LLAMA_IMAGE=ghcr.io/ggml-org/llama.cpp:server-vulkan
+
 FROM golang:1.26-alpine AS builder
 
 WORKDIR /src
@@ -15,9 +21,6 @@ ARG GIT_COMMIT
 # build needs neither node nor tailwindcss.
 RUN CGO_ENABLED=0 go build -o /lim ./cmd/lim
 
-# The base image ships /app/llama-server. Defaults to the Vulkan server image;
-# override with LLAMA_IMAGE=...:server-cuda to build the CUDA variant.
-ARG LLAMA_IMAGE=ghcr.io/ggml-org/llama.cpp:server-vulkan
 FROM ${LLAMA_IMAGE}
 
 COPY --from=builder /lim /usr/local/bin/lim

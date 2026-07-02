@@ -30,6 +30,7 @@ Global or per Auth Token stats, traces and logs:
 - on demand model downloads handled by llama-server, no useless lock-in stuff 
 - supports multiple alias names for your models
 - run with `--show-llama-logs` to get the full llama-server logs to stdout, nothing is hidden
+- the proxy webinterface works on mobile
 
 
 ## Config format: 

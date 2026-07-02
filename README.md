@@ -28,6 +28,7 @@ Global or per Auth Token stats, traces and logs:
 - auth tokens with per token logs & metrics
 - config has zero abstraction, all llama-server args are visible. you can use your existing configs
 - on demand model downloads handled by llama-server, no useless lock-in stuff 
+- supports multiple alias names for your models
 
 
 ## Config format: 

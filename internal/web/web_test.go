@@ -114,11 +114,7 @@ func (f *fakeLogStore) RecentByToken(_ string, limit, offset int) ([]store.Reque
 	if offset >= len(f.recent) {
 		return nil, nil
 	}
-	end := offset + limit
-	if end > len(f.recent) {
-		end = len(f.recent)
-	}
-	return f.recent[offset:end], nil
+	return f.recent[offset:min(offset+limit, len(f.recent))], nil
 }
 
 func testConfig(t *testing.T) *config.Config {
@@ -216,6 +212,14 @@ func TestInstancesPageShowsConfigAndLogs(t *testing.T) {
 	}
 	if !strings.Contains(body, "Live instance logs") || !strings.Contains(body, "/instances/logs.txt") {
 		t.Errorf("instances page missing live logs section: %q", body)
+	}
+	// The page must subscribe to SSE and swap the live model grid + status, so
+	// start/stop is reflected without a reload.
+	if !strings.Contains(body, `sse-connect="/events"`) {
+		t.Errorf("instances page not connected to the SSE stream: %q", body)
+	}
+	if !strings.Contains(body, `sse-swap="models"`) || !strings.Contains(body, `sse-swap="instances"`) {
+		t.Errorf("instances page missing live model grid/status swaps: %q", body)
 	}
 }
 

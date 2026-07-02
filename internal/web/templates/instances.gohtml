@@ -1,41 +1,23 @@
 {{define "content"}}
-<div class="mb-4 flex items-center justify-between">
-  <h1 class="text-xl font-semibold">Models</h1>
-  <form method="post" action="/instances/stop">
-    <button class="rounded bg-rose-600 px-3 py-1.5 text-sm hover:bg-rose-500">Stop active</button>
-  </form>
-</div>
-<div class="grid gap-3 sm:grid-cols-2">
-  {{range .Models}}
-  <div class="rounded-lg border {{if .Active}}border-emerald-600{{else}}border-slate-800{{end}} bg-slate-900 p-4">
-    <div class="flex items-center justify-between">
-      <div class="font-semibold">{{.Name}}</div>
-      {{if .Active}}<span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">active</span>{{end}}
-    </div>
-    {{if .Aliases}}<div class="mt-1 text-xs text-slate-400">aliases: {{join .Aliases ", "}}</div>{{end}}
-    <div class="mt-1 text-xs text-slate-400">idle ttl: {{.TTL}}s</div>
-    <div class="mt-3 flex gap-2">
-      <form method="post" action="/instances/{{.Name}}/start">
-        <button class="rounded bg-sky-600 px-3 py-1.5 text-sm hover:bg-sky-500">Start</button>
-      </form>
-      <a href="/llama-server/{{.Name}}/" target="_blank" class="rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">Open WebUI</a>
-    </div>
-    {{if .Cmd}}
-    <details class="mt-3">
-      <summary class="cursor-pointer text-xs text-slate-400 hover:text-slate-200">llama-server config</summary>
-      <pre class="mt-2 overflow-x-auto rounded bg-slate-950 p-2 text-xs text-slate-400">{{.Cmd}}</pre>
-    </details>
-    {{end}}
+<div hx-ext="sse" sse-connect="/events">
+  <div class="mb-4 flex items-center justify-between">
+    <h1 class="text-xl font-semibold">Models</h1>
+    <form method="post" action="/instances/stop">
+      <button class="rounded bg-rose-600 px-3 py-1.5 text-sm hover:bg-rose-500">Stop active</button>
+    </form>
   </div>
-  {{end}}
-</div>
 
-<div class="mb-2 mt-6 flex items-center justify-between">
-  <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Live instance logs</h2>
-  <a href="/instances/logs.txt" target="_blank" class="text-xs text-sky-400 hover:text-sky-300">Open fullscreen ↗</a>
-</div>
-<div hx-get="/instances/logs" hx-trigger="load, every 2s" hx-swap="innerHTML"
-     class="rounded-lg border border-slate-800 bg-slate-900">
-  {{template "instanceLogs" .Snapshot}}
+  <div id="instance-status" class="mb-4" sse-swap="instances">{{template "instanceStatus" .Snapshot}}</div>
+
+  <div id="model-grid" sse-swap="models">{{template "modelGrid" .Models}}</div>
+
+  <div class="mb-2 mt-6 flex items-center justify-between">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Live instance logs</h2>
+    <a href="/instances/logs.txt" target="_blank" class="text-xs text-sky-400 hover:text-sky-300">Open fullscreen ↗</a>
+  </div>
+  <div hx-get="/instances/logs" hx-trigger="load, every 2s" hx-swap="innerHTML"
+       class="rounded-lg border border-slate-800 bg-slate-900">
+    {{template "instanceLogs" .Snapshot}}
+  </div>
 </div>
 {{end}}

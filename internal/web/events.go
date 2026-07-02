@@ -29,6 +29,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	// Push current state on connect so a freshly loaded page is accurate.
 	snap := s.mgr.Snapshot()
 	s.writeSSE(w, flusher, "instances", s.fragment("instanceStatus", snap))
+	s.writeSSE(w, flusher, "models", s.fragment("modelGrid", s.modelStatuses()))
 	s.writeSSE(w, flusher, "queue", s.fragment("queueBadge", snap.QueueDepth))
 
 	for {
@@ -43,6 +44,8 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 			case events.TopicInstances:
 				if snap, ok := ev.Data.(manager.Snapshot); ok {
 					s.writeSSE(w, flusher, "instances", s.fragment("instanceStatus", snap))
+					// The model grid's active state also changes on every swap.
+					s.writeSSE(w, flusher, "models", s.fragment("modelGrid", s.modelStatuses()))
 				}
 			case events.TopicQueue:
 				s.writeSSE(w, flusher, "queue", s.fragment("queueBadge", ev.Data))

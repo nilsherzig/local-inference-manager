@@ -1,9 +1,9 @@
 {{define "content"}}
-<a href="/" class="text-sm text-sky-400 hover:underline">&larr; back</a>
+<a href="/" class="text-sm text-mauve-400 hover:underline">&larr; back</a>
 <h1 class="mt-2 text-xl font-semibold">Request #{{.Log.ID}}</h1>
 <div class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-  <div>Model: <span class="text-slate-300">{{.Log.Model}}</span></div>
-  <div>Endpoint: <span class="text-slate-300">{{.Log.Endpoint}}</span></div>
+  <div>Model: <span class="text-zinc-300">{{.Log.Model}}</span></div>
+  <div>Endpoint: <span class="text-zinc-300">{{.Log.Endpoint}}</span></div>
   <div>Status: {{.Log.Status}}</div>
   <div>Wall time: {{printf "%.1f" (secs .Log.WallMs)}} s</div>
   <div>Prompt: {{.Log.PromptN}} tok ({{printf "%.1f" .Log.PromptPerSec}} tok/s)</div>
@@ -12,11 +12,11 @@
   {{if .Log.DraftN}}<div>Draft: {{.Log.DraftNAccepted}}/{{.Log.DraftN}} accepted ({{printf "%.0f" (pct .Log.DraftNAccepted .Log.DraftN)}}%)</div>{{end}}
 </div>
 {{if .Log.RequestBody}}
-<h2 class="mb-1 mt-6 text-sm font-semibold text-slate-400">Request body</h2>
-<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-3 text-xs">{{prettyJSON .Log.RequestBody}}</pre>
+<h2 class="mb-1 mt-6 text-sm font-semibold text-zinc-400">Request body</h2>
+<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-zinc-950 p-3 text-xs">{{prettyJSON .Log.RequestBody}}</pre>
 {{end}}
 {{if .Log.ResponseBody}}
-<h2 class="mb-1 mt-4 text-sm font-semibold text-slate-400">Response body</h2>
-<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-3 text-xs">{{prettyJSON .Log.ResponseBody}}</pre>
+<h2 class="mb-1 mt-4 text-sm font-semibold text-zinc-400">Response body</h2>
+<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-zinc-950 p-3 text-xs">{{prettyJSON .Log.ResponseBody}}</pre>
 {{end}}
 {{end}}

@@ -1,61 +1,61 @@
 {{define "instanceStatus"}}{{if .Running}}
-<div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+<div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
   <div class="flex items-center justify-between">
     <div>
       <div class="text-lg font-semibold">{{.Model}}</div>
-      <div class="text-sm text-slate-400">state: {{.State}} · port {{.Port}} · up {{humanDur .Uptime}}</div>
+      <div class="text-sm text-zinc-400">state: {{.State}} · port {{.Port}} · up {{humanDur .Uptime}}</div>
     </div>
     <span class="inline-flex items-center rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-300">{{.State}}</span>
   </div>
-  {{if and (eq .State "starting") .Detail}}<div class="mt-2 truncate font-mono text-xs text-slate-500" title="{{.Detail}}">{{.Detail}}</div>{{end}}
+  {{if and (eq .State "starting") .Detail}}<div class="mt-2 truncate font-mono text-xs text-zinc-500" title="{{.Detail}}">{{.Detail}}</div>{{end}}
 </div>
 {{else}}
-<div class="rounded-lg border border-slate-800 bg-slate-900 p-4 text-slate-400">No instance running.</div>
+<div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-zinc-400">No instance running.</div>
 {{end}}{{end}}
 
 {{define "modelGrid"}}<div class="grid gap-3 sm:grid-cols-2">
   {{range .}}
-  <div class="rounded-lg border {{if .Active}}border-emerald-600{{else}}border-slate-800{{end}} bg-slate-900 p-4">
+  <div class="rounded-lg border {{if .Active}}border-emerald-600{{else}}border-zinc-800{{end}} bg-zinc-900 p-4">
     <div class="flex items-center justify-between">
       <div class="font-semibold">{{.Name}}</div>
       {{if .Active}}<span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">active</span>{{end}}
     </div>
-    {{if .Aliases}}<div class="mt-1 text-xs text-slate-400">aliases: {{join .Aliases ", "}}</div>{{end}}
-    <div class="mt-1 text-xs text-slate-400">idle ttl: {{.TTL}}s</div>
+    {{if .Aliases}}<div class="mt-1 text-xs text-zinc-400">aliases: {{join .Aliases ", "}}</div>{{end}}
+    <div class="mt-1 text-xs text-zinc-400">idle ttl: {{.TTL}}s</div>
     <div class="mt-3 flex gap-2">
       <form method="post" action="/instances/{{.Name}}/start">
-        <button class="rounded bg-sky-600 px-3 py-1.5 text-sm hover:bg-sky-500">Start</button>
+        <button class="rounded bg-mauve-600 px-3 py-1.5 text-sm hover:bg-mauve-500">Start</button>
       </form>
-      <a href="/llama-server/{{.Name}}/" target="_blank" class="rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">Open WebUI</a>
-      <a href="/instances/logs.txt" target="_blank" class="rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">Log</a>
+      <a href="/llama-server/{{.Name}}/" target="_blank" class="rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800">Open WebUI</a>
+      <a href="/instances/logs.txt" target="_blank" class="rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800">Log</a>
     </div>
     {{if .Cmd}}
     <details class="mt-3">
-      <summary class="cursor-pointer text-xs text-slate-400 hover:text-slate-200">llama-server config</summary>
-      <pre class="mt-2 overflow-x-auto rounded bg-slate-950 p-2 text-xs text-slate-400">{{.Cmd}}</pre>
+      <summary class="cursor-pointer text-xs text-zinc-400 hover:text-zinc-200">llama-server config</summary>
+      <pre class="mt-2 overflow-x-auto rounded bg-zinc-950 p-2 text-xs text-zinc-400">{{.Cmd}}</pre>
     </details>
     {{end}}
   </div>
   {{end}}
 </div>{{end}}
 
-{{define "queueBadge"}}<span class="inline-flex items-center rounded-full bg-slate-800 px-3 py-1 text-sm">Queue: {{.}}</span>{{end}}
+{{define "queueBadge"}}<span class="inline-flex items-center rounded-full bg-zinc-800 px-3 py-1 text-sm">Queue: {{.}}</span>{{end}}
 
-{{define "playgroundResult"}}<div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+{{define "playgroundResult"}}<div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
   {{if .Err}}
   <div class="rounded border border-rose-800 bg-rose-950/40 px-3 py-2 text-sm text-rose-300">{{.Err}}</div>
   {{else}}
-  <div class="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+  <div class="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
     <span>model {{.Model}}</span>
     <span>{{.WallMs}}ms wall</span>
     <span>in {{.PromptN}} tok @ {{printf "%.1f" .PromptPerSec}} tok/s</span>
     <span>out {{.PredictedN}} tok @ {{printf "%.1f" .PredictedPerSec}} tok/s</span>
   </div>
-  <div class="whitespace-pre-wrap rounded bg-slate-950 p-3 text-sm text-slate-100">{{.Answer}}</div>
+  <div class="whitespace-pre-wrap rounded bg-zinc-950 p-3 text-sm text-zinc-100">{{.Answer}}</div>
   {{end}}
 </div>{{end}}
 
-{{define "requestTableHead"}}<tr class="text-left text-xs uppercase tracking-wide text-slate-500">
+{{define "requestTableHead"}}<tr class="text-left text-xs uppercase tracking-wide text-zinc-500">
   <th class="px-3 py-2 font-medium">Time</th>
   <th class="px-3 py-2 font-medium">Model</th>
   <th class="px-3 py-2 font-medium">Status</th>
@@ -66,13 +66,13 @@
   <th class="px-3 py-2 font-medium">Draft</th>
 </tr>{{end}}
 
-{{define "requestRow"}}<tr class="cursor-pointer border-t border-slate-800 hover:bg-slate-800/50" onclick="location.href='/requests/{{.ID}}'">
-  <td class="whitespace-nowrap px-3 py-2 text-slate-400">{{.CreatedAt.Format "15:04:05"}}</td>
+{{define "requestRow"}}<tr class="cursor-pointer border-t border-zinc-800 hover:bg-zinc-800/50" onclick="location.href='/requests/{{.ID}}'">
+  <td class="whitespace-nowrap px-3 py-2 text-zinc-400">{{.CreatedAt.Format "15:04:05"}}</td>
   <td class="px-3 py-2 font-medium">{{.Model}}</td>
   <td class="px-3 py-2">{{.Status}}</td>
   <td class="whitespace-nowrap px-3 py-2">{{printf "%.1f" (secs .WallMs)}}s</td>
-  <td class="whitespace-nowrap px-3 py-2">{{.PromptN}}{{if .CacheN}} <span class="text-slate-500">(+{{.CacheN}} cache)</span>{{end}}</td>
+  <td class="whitespace-nowrap px-3 py-2">{{.PromptN}}{{if .CacheN}} <span class="text-zinc-500">(+{{.CacheN}} cache)</span>{{end}}</td>
   <td class="px-3 py-2">{{.PredictedN}}</td>
   <td class="whitespace-nowrap px-3 py-2">{{printf "%.1f" .PredictedPerSec}} tok/s</td>
-  <td class="whitespace-nowrap px-3 py-2">{{if .DraftN}}{{.DraftNAccepted}}/{{.DraftN}} ({{printf "%.0f" (pct .DraftNAccepted .DraftN)}}%){{else}}<span class="text-slate-600">—</span>{{end}}</td>
+  <td class="whitespace-nowrap px-3 py-2">{{if .DraftN}}{{.DraftNAccepted}}/{{.DraftN}} ({{printf "%.0f" (pct .DraftNAccepted .DraftN)}}%){{else}}<span class="text-zinc-600">—</span>{{end}}</td>
 </tr>{{end}}

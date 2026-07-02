@@ -198,11 +198,33 @@ func (s *Server) stopInstance(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/instances", http.StatusSeeOther)
 }
 
-func (s *Server) tokensPage(w http.ResponseWriter, r *http.Request) {
+// tokenRow is a token plus its lifetime input/output token totals (no cache).
+type tokenRow struct {
+	store.APIToken
+	In  int64
+	Out int64
+}
+
+// tokenRows lists every token with its aggregated prompt/predicted token counts.
+func (s *Server) tokenRows() []tokenRow {
 	tokens, _ := s.tokens.List()
+	rows := make([]tokenRow, 0, len(tokens))
+	for _, t := range tokens {
+		var in, out int64
+		if s.logs != nil {
+			if st, err := s.logs.StatsByToken(t.ID); err == nil {
+				in, out = st.PromptTokens, st.PredictedTokens
+			}
+		}
+		rows = append(rows, tokenRow{APIToken: t, In: in, Out: out})
+	}
+	return rows
+}
+
+func (s *Server) tokensPage(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "tokens", map[string]any{
 		"Active": "tokens",
-		"Tokens": tokens,
+		"Tokens": s.tokenRows(),
 	})
 }
 
@@ -216,10 +238,9 @@ func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	tokens, _ := s.tokens.List()
 	s.render(w, "tokens", map[string]any{
 		"Active":   "tokens",
-		"Tokens":   tokens,
+		"Tokens":   s.tokenRows(),
 		"NewToken": plaintext,
 		"NewName":  name,
 	})

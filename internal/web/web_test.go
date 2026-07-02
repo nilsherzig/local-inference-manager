@@ -227,6 +227,27 @@ func TestInstanceLogsTextNoInstance(t *testing.T) {
 	}
 }
 
+func TestTokensPageShowsInOutTokens(t *testing.T) {
+	tokens := newFakeTokenStore()
+	tokens.Create("ci")
+	cfg := testConfig(t)
+	logs := &fakeLogStore{stats: store.TokenStats{PromptTokens: 120, PredictedTokens: 45, CacheTokens: 9999}}
+	s := New(cfg, manager.New(cfg, nil), tokens, logs, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/tokens", nil)
+	rec := httptest.NewRecorder()
+	s.tokensPage(rec, req)
+
+	body := rec.Body.String()
+	if !strings.Contains(body, ">120<") || !strings.Contains(body, ">45<") {
+		t.Errorf("tokens table missing in/out counts:\n%s", body)
+	}
+	// Cache tokens must not leak into the in/out columns.
+	if strings.Contains(body, "9999") {
+		t.Errorf("cache tokens should not be shown in the tokens table")
+	}
+}
+
 func TestRequestDetailPrettyPrintsJSON(t *testing.T) {
 	cfg := testConfig(t)
 	logs := &fakeLogStore{get: &store.RequestLog{

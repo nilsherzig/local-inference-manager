@@ -16,6 +16,8 @@
       <tr>
         <th class="px-3 py-2">Name</th>
         <th class="px-3 py-2">Prefix</th>
+        <th class="px-3 py-2 text-right">In</th>
+        <th class="px-3 py-2 text-right">Out</th>
         <th class="px-3 py-2">Created</th>
         <th class="px-3 py-2">Status</th>
         <th class="px-3 py-2"></th>
@@ -26,12 +28,14 @@
       <tr class="border-t border-slate-800">
         <td class="px-3 py-2"><a href="/tokens/{{.ID}}" class="text-sky-400 hover:underline">{{.Name}}</a></td>
         <td class="px-3 py-2 font-mono text-xs">{{.Prefix}}…</td>
+        <td class="px-3 py-2 text-right tabular-nums">{{.In}}</td>
+        <td class="px-3 py-2 text-right tabular-nums">{{.Out}}</td>
         <td class="px-3 py-2 text-slate-400">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
         <td class="px-3 py-2">{{if .Revoked}}<span class="text-rose-400">revoked</span>{{else}}<span class="text-emerald-400">active</span>{{end}}</td>
         <td class="px-3 py-2 text-right">{{if not .Revoked}}<form method="post" action="/tokens/{{.ID}}/revoke"><button class="text-xs text-rose-400 hover:underline">revoke</button></form>{{end}}</td>
       </tr>
       {{else}}
-      <tr><td colspan="5" class="px-3 py-4 text-slate-500">No tokens yet.</td></tr>
+      <tr><td colspan="7" class="px-3 py-4 text-slate-500">No tokens yet.</td></tr>
       {{end}}
     </tbody>
   </table>

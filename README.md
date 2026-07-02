@@ -9,16 +9,7 @@
 - Do you happen to be a member of the permanent underclass (less than 500GB VRAM)?
 - Would you like to keep different models ready to load on demand and have them unload after some idle time? 
 
-## couple images:
-
-On demand instance start and stop with full log and proxied llama-server webui:
-
-![instance view](./assets/lim2.png)
-
-
-Global or per Auth Token stats, traces and logs: 
-
-![per token view](./assets/lim1.png)
+![Video Demo](./assets/recording.mp4)
 
 ## Features:
 

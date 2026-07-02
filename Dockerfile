@@ -25,4 +25,4 @@ EXPOSE 8080
 
 # Config comes from a mounted ConfigMap; the SQLite DB (tokens, request log)
 # lives in the mounted /data volume so it survives restarts.
-ENTRYPOINT ["lim", "-config", "/config/config.yaml"]
+ENTRYPOINT ["lim", "-config", "/config/config.yaml", "--show-llama-logs"]

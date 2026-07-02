@@ -17,4 +17,12 @@
     </table>
   </div>
 </div>
+<script>
+  // Keep only the 50 most recent rows; SSE prepends new ones indefinitely.
+  document.body.addEventListener('htmx:sseMessage', function () {
+    const tb = document.getElementById('request-log');
+    if (!tb) return;
+    while (tb.children.length > 50) tb.removeChild(tb.lastElementChild);
+  });
+</script>
 {{end}}

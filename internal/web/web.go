@@ -71,6 +71,15 @@ func New(cfg *config.Config, mgr *manager.Manager, tokens store.TokenStore, logs
 			}
 			return float64(num) / float64(den) * 100
 		},
+		// dict builds a map from alternating key/value pairs, so templates can
+		// pass named arguments to a sub-template.
+		"dict": func(kv ...any) map[string]any {
+			m := make(map[string]any, len(kv)/2)
+			for i := 0; i+1 < len(kv); i += 2 {
+				m[fmt.Sprint(kv[i])] = kv[i+1]
+			}
+			return m
+		},
 	}
 	base := []string{"templates/layout.gohtml", "templates/fragments.gohtml"}
 	pages := map[string]*template.Template{}
@@ -296,7 +305,89 @@ func (s *Server) requestDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, "request_detail", map[string]any{
-		"Active": "dashboard",
-		"Log":    log,
+		"Active":   "dashboard",
+		"Log":      log,
+		"Messages": parseMessages(log.RequestBody),
+		"Answer":   parseAnswer(log.ResponseBody),
 	})
+}
+
+// chatMessage is one turn of a chat request, rendered in the readable view.
+type chatMessage struct {
+	Role    string
+	Content string
+}
+
+// answer is the assistant reply extracted from a chat completion response.
+type answer struct {
+	Content      string
+	Reasoning    string
+	FinishReason string
+}
+
+// asText renders a chat "content" field, which is either a plain string or an
+// array of content parts (multimodal), as readable text.
+func asText(raw json.RawMessage) string {
+	var s string
+	if json.Unmarshal(raw, &s) == nil {
+		return s
+	}
+	var parts []struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	if json.Unmarshal(raw, &parts) == nil {
+		var b strings.Builder
+		for _, p := range parts {
+			if p.Text != "" {
+				b.WriteString(p.Text)
+			}
+		}
+		if b.Len() > 0 {
+			return b.String()
+		}
+	}
+	return string(raw)
+}
+
+// parseMessages pulls the chat messages out of a request body. It returns nil
+// for anything that is not a recognisable chat request.
+func parseMessages(body string) []chatMessage {
+	var req struct {
+		Messages []struct {
+			Role    string          `json:"role"`
+			Content json.RawMessage `json:"content"`
+		} `json:"messages"`
+	}
+	if json.Unmarshal([]byte(body), &req) != nil {
+		return nil
+	}
+	out := make([]chatMessage, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		out = append(out, chatMessage{Role: m.Role, Content: asText(m.Content)})
+	}
+	return out
+}
+
+// parseAnswer pulls the assistant reply out of a chat completion response. It
+// returns nil for anything it cannot recognise.
+func parseAnswer(body string) *answer {
+	var resp struct {
+		Choices []struct {
+			FinishReason string `json:"finish_reason"`
+			Message      struct {
+				Content   string `json:"content"`
+				Reasoning string `json:"reasoning_content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if json.Unmarshal([]byte(body), &resp) != nil || len(resp.Choices) == 0 {
+		return nil
+	}
+	c := resp.Choices[0]
+	return &answer{
+		Content:      c.Message.Content,
+		Reasoning:    c.Message.Reasoning,
+		FinishReason: c.FinishReason,
+	}
 }

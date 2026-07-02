@@ -1,22 +1,89 @@
 {{define "content"}}
 <a href="/" class="text-sm text-mauve-400 hover:underline">&larr; back</a>
-<h1 class="mt-2 text-xl font-semibold">Request #{{.Log.ID}}</h1>
-<div class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-  <div>Model: <span class="text-zinc-300">{{.Log.Model}}</span></div>
-  <div>Endpoint: <span class="text-zinc-300">{{.Log.Endpoint}}</span></div>
-  <div>Status: {{.Log.Status}}</div>
-  <div>Wall time: {{printf "%.1f" (secs .Log.WallMs)}} s</div>
-  <div>Prompt: {{.Log.PromptN}} tok ({{printf "%.1f" .Log.PromptPerSec}} tok/s)</div>
-  <div>Generated: {{.Log.PredictedN}} tok ({{printf "%.1f" .Log.PredictedPerSec}} tok/s)</div>
-  {{if .Log.CacheN}}<div>Cache: {{.Log.CacheN}} tok reused</div>{{end}}
-  {{if .Log.DraftN}}<div>Draft: {{.Log.DraftNAccepted}}/{{.Log.DraftN}} accepted ({{printf "%.0f" (pct .Log.DraftNAccepted .Log.DraftN)}}%)</div>{{end}}
+
+<div class="mt-2 flex flex-wrap items-center gap-3">
+  <h1 class="text-xl font-semibold">Request</h1>
+  {{if lt .Log.Status 300}}
+  <span class="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">{{.Log.Status}}</span>
+  {{else if lt .Log.Status 500}}
+  <span class="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-400">{{.Log.Status}}</span>
+  {{else}}
+  <span class="rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-medium text-rose-400">{{.Log.Status}}</span>
+  {{end}}
 </div>
-{{if .Log.RequestBody}}
-<h2 class="mb-1 mt-6 text-sm font-semibold text-zinc-400">Request body</h2>
-<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-zinc-950 p-3 text-xs">{{prettyJSON .Log.RequestBody}}</pre>
+<div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400">
+  <span class="rounded bg-zinc-800 px-2 py-0.5 font-mono text-xs text-zinc-300">{{.Log.Model}}</span>
+  <span class="font-mono text-xs">{{.Log.Endpoint}}</span>
+  <span class="font-mono text-xs text-zinc-600">{{.Log.ID}}</span>
+</div>
+
+<div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+  <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+    <div class="text-xs uppercase tracking-wide text-zinc-500">Wall time</div>
+    <div class="mt-1 text-lg font-semibold">{{printf "%.1f" (secs .Log.WallMs)}}<span class="ml-1 text-sm font-normal text-zinc-500">s</span></div>
+  </div>
+  <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+    <div class="text-xs uppercase tracking-wide text-zinc-500">Prompt</div>
+    <div class="mt-1 text-lg font-semibold">{{.Log.PromptN}}<span class="ml-1 text-sm font-normal text-zinc-500">tok</span></div>
+    <div class="text-xs text-zinc-500">{{printf "%.1f" .Log.PromptPerSec}} tok/s</div>
+  </div>
+  <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+    <div class="text-xs uppercase tracking-wide text-zinc-500">Generated</div>
+    <div class="mt-1 text-lg font-semibold">{{.Log.PredictedN}}<span class="ml-1 text-sm font-normal text-zinc-500">tok</span></div>
+    <div class="text-xs text-zinc-500">{{printf "%.1f" .Log.PredictedPerSec}} tok/s</div>
+  </div>
+  {{if .Log.DraftN}}
+  <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+    <div class="text-xs uppercase tracking-wide text-zinc-500">Draft accepted</div>
+    <div class="mt-1 text-lg font-semibold">{{printf "%.0f" (pct .Log.DraftNAccepted .Log.DraftN)}}<span class="ml-1 text-sm font-normal text-zinc-500">%</span></div>
+    <div class="text-xs text-zinc-500">{{.Log.DraftNAccepted}}/{{.Log.DraftN}} tok</div>
+  </div>
+  {{else if .Log.CacheN}}
+  <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+    <div class="text-xs uppercase tracking-wide text-zinc-500">Cache reused</div>
+    <div class="mt-1 text-lg font-semibold">{{.Log.CacheN}}<span class="ml-1 text-sm font-normal text-zinc-500">tok</span></div>
+  </div>
+  {{end}}
+</div>
+
+{{if or .Messages .Answer}}
+<h2 class="mb-2 mt-6 text-sm font-semibold uppercase tracking-wide text-zinc-400">Conversation</h2>
+<div class="space-y-3">
+  {{range .Messages}}{{template "chatBubble" (dict "Role" .Role "Text" .Content)}}{{end}}
+  {{with .Answer}}
+    {{if .Reasoning}}{{template "chatBubble" (dict "Role" "reasoning" "Text" .Reasoning)}}{{end}}
+    {{template "chatBubble" (dict "Role" "assistant" "Text" .Content "Finish" .FinishReason)}}
+  {{end}}
+</div>
 {{end}}
-{{if .Log.ResponseBody}}
-<h2 class="mb-1 mt-4 text-sm font-semibold text-zinc-400">Response body</h2>
-<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-zinc-950 p-3 text-xs">{{prettyJSON .Log.ResponseBody}}</pre>
+
+<details class="mt-6 rounded-lg border border-zinc-800 bg-zinc-900">
+  <summary class="cursor-pointer select-none px-3 py-2 text-sm font-semibold text-zinc-400 hover:text-zinc-200">Raw request body</summary>
+  <pre class="max-h-96 overflow-auto whitespace-pre-wrap border-t border-zinc-800 p-3 text-xs text-zinc-300">{{prettyJSON .Log.RequestBody}}</pre>
+</details>
+
+<details class="mt-3 rounded-lg border border-zinc-800 bg-zinc-900">
+  <summary class="cursor-pointer select-none px-3 py-2 text-sm font-semibold text-zinc-400 hover:text-zinc-200">Raw response body</summary>
+  <pre class="max-h-96 overflow-auto whitespace-pre-wrap border-t border-zinc-800 p-3 text-xs text-zinc-300">{{prettyJSON .Log.ResponseBody}}</pre>
+</details>
 {{end}}
+
+{{define "chatBubble"}}
+<div class="rounded-lg border border-zinc-800 bg-zinc-900">
+  <div class="flex items-center justify-between border-b border-zinc-800 px-3 py-1.5">
+    {{if eq .Role "system"}}
+    <span class="text-xs font-semibold uppercase tracking-wide text-amber-400">System</span>
+    {{else if eq .Role "user"}}
+    <span class="text-xs font-semibold uppercase tracking-wide text-sky-400">User</span>
+    {{else if eq .Role "assistant"}}
+    <span class="text-xs font-semibold uppercase tracking-wide text-emerald-400">Assistant</span>
+    {{else if eq .Role "reasoning"}}
+    <span class="text-xs font-semibold uppercase tracking-wide text-mauve-400">Reasoning</span>
+    {{else}}
+    <span class="text-xs font-semibold uppercase tracking-wide text-zinc-400">{{.Role}}</span>
+    {{end}}
+    {{if .Finish}}<span class="font-mono text-xs text-zinc-600">{{.Finish}}</span>{{end}}
+  </div>
+  <div class="max-h-96 overflow-auto whitespace-pre-wrap px-3 py-2 text-sm {{if eq .Role "reasoning"}}text-zinc-500{{else}}text-zinc-200{{end}}">{{.Text}}</div>
+</div>
 {{end}}

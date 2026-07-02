@@ -305,6 +305,67 @@ func TestRequestDetailPrettyPrintsJSON(t *testing.T) {
 	}
 }
 
+func TestRequestDetailRendersConversation(t *testing.T) {
+	cfg := testConfig(t)
+	logs := &fakeLogStore{get: &store.RequestLog{
+		ID:     "r1",
+		Model:  "gemma",
+		Status: 200,
+		RequestBody: `{"messages":[
+			{"role":"system","content":"be nice"},
+			{"role":"user","content":"hi there"}
+		]}`,
+		ResponseBody: `{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":"hello!","reasoning_content":"thinking"}}]}`,
+	}}
+	s := New(cfg, manager.New(cfg, nil), newFakeTokenStore(), logs, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/requests/r1", nil)
+	req.SetPathValue("id", "r1")
+	rec := httptest.NewRecorder()
+	s.requestDetail(rec, req)
+
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	for _, want := range []string{"be nice", "hi there", "hello!", "thinking", "System", "User", "Assistant", "Reasoning"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("conversation view missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestParseMessagesAndAnswer(t *testing.T) {
+	// Positive: a chat request/response is parsed into readable parts.
+	msgs := parseMessages(`{"messages":[{"role":"user","content":"hey"}]}`)
+	if len(msgs) != 1 || msgs[0].Role != "user" || msgs[0].Content != "hey" {
+		t.Errorf("parseMessages = %+v, want one user message", msgs)
+	}
+	// Multimodal content (array of parts) is flattened to its text.
+	multi := parseMessages(`{"messages":[{"role":"user","content":[{"type":"text","text":"pic please"}]}]}`)
+	if len(multi) != 1 || multi[0].Content != "pic please" {
+		t.Errorf("parseMessages multimodal = %+v, want text extracted", multi)
+	}
+	ans := parseAnswer(`{"choices":[{"finish_reason":"stop","message":{"content":"hi","reasoning_content":"r"}}]}`)
+	if ans == nil || ans.Content != "hi" || ans.Reasoning != "r" || ans.FinishReason != "stop" {
+		t.Errorf("parseAnswer = %+v, want parsed answer", ans)
+	}
+
+	// Negative: non-chat / malformed bodies yield nothing rather than panic.
+	if got := parseMessages(`not json`); got != nil {
+		t.Errorf("parseMessages(non-json) = %+v, want nil", got)
+	}
+	if got := parseMessages(`{"prompt":"legacy completion"}`); len(got) != 0 {
+		t.Errorf("parseMessages(no messages) = %+v, want empty", got)
+	}
+	if got := parseAnswer(`{"choices":[]}`); got != nil {
+		t.Errorf("parseAnswer(no choices) = %+v, want nil", got)
+	}
+	if got := parseAnswer(`garbage`); got != nil {
+		t.Errorf("parseAnswer(garbage) = %+v, want nil", got)
+	}
+}
+
 func TestTokenDetailShowsStats(t *testing.T) {
 	tokens := newFakeTokenStore()
 	_, tok, _ := tokens.Create("ci")

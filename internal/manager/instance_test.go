@@ -5,6 +5,27 @@ import (
 	"testing"
 )
 
+func TestRingBufferLastLine(t *testing.T) {
+	cases := []struct {
+		name, in, want string
+	}{
+		{"plain lines", "loading model\nready\n", "ready"},
+		{"carriage return progress", "download\rdownload 50%\rdownload 100%", "download 100%"},
+		{"single line", "starting", "starting"},
+		{"empty", "", ""},
+		{"trailing newlines", "done\n\n\n", "done"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := newRingBuffer(1024)
+			_, _ = r.Write([]byte(c.in))
+			if got := r.LastLine(); got != c.want {
+				t.Errorf("LastLine() = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
 func TestPrefixWriterCompleteLines(t *testing.T) {
 	var buf bytes.Buffer
 	w := newPrefixWriter(&buf, "[a] ")

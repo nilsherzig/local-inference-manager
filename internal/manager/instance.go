@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os/exec"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -100,6 +101,19 @@ func (r *ringBuffer) String() string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return string(r.buf)
+}
+
+// LastLine returns the most recent non-empty output line. It treats carriage
+// returns as line breaks so progress bars (which redraw with \r) report their
+// latest state instead of the whole redrawn line.
+func (r *ringBuffer) LastLine() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s := strings.TrimRight(string(r.buf), "\r\n ")
+	if i := strings.LastIndexAny(s, "\r\n"); i >= 0 {
+		return strings.TrimSpace(s[i+1:])
+	}
+	return strings.TrimSpace(s)
 }
 
 // BaseURL is the http address of the instance.

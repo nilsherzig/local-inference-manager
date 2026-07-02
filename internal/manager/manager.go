@@ -64,6 +64,7 @@ type Snapshot struct {
 	StartedAt  time.Time
 	Uptime     time.Duration
 	Logs       string
+	Detail     string // most recent log line (download/startup progress)
 	QueueDepth int64
 }
 
@@ -154,6 +155,7 @@ func (m *Manager) startLocked(canonical string) (*Instance, error) {
 	}
 
 	go m.reap(inst)
+	go m.pollStarting(inst)
 
 	started := time.Now()
 	if err := m.waitHealthy(inst); err != nil {
@@ -167,6 +169,25 @@ func (m *Manager) startLocked(canonical string) (*Instance, error) {
 	m.publishInstance()
 	log.Printf("manager: %q ready on port %d after %s", canonical, port, time.Since(started).Round(time.Millisecond))
 	return inst, nil
+}
+
+// pollStarting republishes instance state every 2s while the instance is still
+// starting, so the UI reflects download/startup progress (the last log line)
+// without waiting for a state transition.
+func (m *Manager) pollStarting(inst *Instance) {
+	t := time.NewTicker(2 * time.Second)
+	defer t.Stop()
+	for {
+		select {
+		case <-inst.exited:
+			return
+		case <-t.C:
+			if inst.State() != StateStarting {
+				return
+			}
+			m.publishInstance()
+		}
+	}
 }
 
 // reap waits for the process to exit and handles unexpected crashes.
@@ -294,6 +315,7 @@ func (m *Manager) Snapshot() Snapshot {
 		s.StartedAt = cur.StartedAt
 		s.Uptime = time.Since(cur.StartedAt)
 		s.Logs = cur.logs.String()
+		s.Detail = cur.logs.LastLine()
 	}
 	return s
 }

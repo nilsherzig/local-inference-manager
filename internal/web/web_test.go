@@ -219,6 +219,24 @@ func TestInstancesPageShowsConfigAndLogs(t *testing.T) {
 	}
 }
 
+func TestInstanceStatusShowsStartupDetailOnlyWhileStarting(t *testing.T) {
+	s := newTestServer(t, newFakeTokenStore())
+
+	starting := s.fragment("instanceStatus", manager.Snapshot{
+		Running: true, Model: "gemma", State: manager.StateStarting, Detail: "downloading 45%",
+	})
+	if !strings.Contains(starting, "downloading 45%") {
+		t.Errorf("starting status should show the progress detail: %q", starting)
+	}
+
+	ready := s.fragment("instanceStatus", manager.Snapshot{
+		Running: true, Model: "gemma", State: manager.StateReady, Detail: "downloading 45%",
+	})
+	if strings.Contains(ready, "downloading 45%") {
+		t.Errorf("ready status should not show the startup detail: %q", ready)
+	}
+}
+
 func TestInstanceLogsTextNoInstance(t *testing.T) {
 	s := newTestServer(t, newFakeTokenStore())
 	req := httptest.NewRequest(http.MethodGet, "/instances/logs.txt", nil)

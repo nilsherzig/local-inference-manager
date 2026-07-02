@@ -55,14 +55,10 @@ func main() {
 	px := proxy.New(cfg, mgr, db, bus, mets)
 	authMW := auth.Middleware(db)
 
-	// The auth-wrapped chat handler is shared: the mux serves it to external
-	// clients, and the web playground invokes the very same handler with an
-	// auto-managed bearer token, so playground queries take the complete normal
-	// path (auth → ensure → forward → stats capture → dashboard).
 	chatHandler := authMW(http.HandlerFunc(px.OpenAI))
 
 	// Dashboard + SSE (open).
-	web.New(cfg, mgr, db, db, bus, chatHandler).Routes(mux)
+	web.New(cfg, mgr, db, db, bus).Routes(mux)
 
 	mux.Handle("POST /v1/chat/completions", chatHandler)
 	for _, ep := range []string{"/v1/completions", "/v1/embeddings"} {

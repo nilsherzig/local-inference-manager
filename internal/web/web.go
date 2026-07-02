@@ -4,9 +4,7 @@
 package web
 
 import (
-	"bytes"
 	"embed"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -15,8 +13,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/nilsherzig/local-inference-manager/internal/config"
 	"github.com/nilsherzig/local-inference-manager/internal/events"
@@ -35,24 +31,12 @@ type Server struct {
 	logs   store.RequestLogStore
 	bus    *events.Bus
 
-	// chat is the auth-wrapped /v1/chat/completions handler — the exact same
-	// http.Handler the mux serves to external clients. The playground invokes it
-	// with a bearer token so its queries take the complete normal path (auth →
-	// ensure → forward → stats capture → request log → dashboard).
-	chat http.Handler
-
-	pgMu    sync.Mutex // guards pgToken
-	pgToken string     // in-memory plaintext of the playground bearer token
-
 	pages     map[string]*template.Template
 	fragments *template.Template
 }
 
-// playgroundTokenName is the name of the auto-managed playground bearer token.
-const playgroundTokenName = "playground"
-
 // New builds the web server and parses templates.
-func New(cfg *config.Config, mgr *manager.Manager, tokens store.TokenStore, logs store.RequestLogStore, bus *events.Bus, chat http.Handler) *Server {
+func New(cfg *config.Config, mgr *manager.Manager, tokens store.TokenStore, logs store.RequestLogStore, bus *events.Bus) *Server {
 	fm := template.FuncMap{
 		"join": strings.Join,
 		"secs": func(ms int64) float64 { return float64(ms) / 1000 },
@@ -72,7 +56,7 @@ func New(cfg *config.Config, mgr *manager.Manager, tokens store.TokenStore, logs
 	fragments := template.Must(template.New("").Funcs(fm).ParseFS(content, "templates/fragments.gohtml"))
 
 	return &Server{
-		cfg: cfg, mgr: mgr, tokens: tokens, logs: logs, bus: bus, chat: chat,
+		cfg: cfg, mgr: mgr, tokens: tokens, logs: logs, bus: bus,
 		pages: pages, fragments: fragments,
 	}
 }
@@ -93,7 +77,6 @@ func (s *Server) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /tokens/{id}", s.tokenDetail)
 	mux.HandleFunc("POST /tokens/{id}/revoke", s.revokeToken)
 	mux.HandleFunc("GET /test", s.playground)
-	mux.HandleFunc("POST /test", s.runPlayground)
 	mux.HandleFunc("GET /requests/{id}", s.requestDetail)
 	mux.HandleFunc("GET /events", s.events)
 }
@@ -240,18 +223,8 @@ func (s *Server) revokeToken(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/tokens", http.StatusSeeOther)
 }
 
-// playgroundResult is the rendered outcome of a quick test query.
-type playgroundResult struct {
-	Model           string
-	Answer          string
-	WallMs          int64
-	PromptN         int
-	PredictedN      int
-	PromptPerSec    float64
-	PredictedPerSec float64
-	Err             string
-}
-
+// playground renders the Test page: it lists the models and shows a copy-ready
+// curl command. The request itself is run by the user via curl, not in-process.
 func (s *Server) playground(w http.ResponseWriter, r *http.Request) {
 	names := s.cfg.ModelNames()
 	sort.Strings(names)
@@ -261,144 +234,6 @@ func (s *Server) playground(w http.ResponseWriter, r *http.Request) {
 		"Listen": s.cfg.Manager.Listen,
 	})
 }
-
-// runPlayground routes a quick test query through the real proxy handler, so it
-// takes the exact same path as an external /v1 request (ensure → forward →
-// stats capture → request log). The captured response is parsed for display.
-func (s *Server) runPlayground(w http.ResponseWriter, r *http.Request) {
-	model := r.FormValue("model")
-	prompt := strings.TrimSpace(r.FormValue("prompt"))
-	res := playgroundResult{Model: model}
-
-	if prompt == "" {
-		res.Err = "prompt is empty"
-		s.renderFragment(w, "playgroundResult", res)
-		return
-	}
-	log.Printf("playground: query model=%q (%d chars)", model, len(prompt))
-	res = s.queryViaProxy(model, prompt)
-	if res.Err != "" {
-		log.Printf("playground: query model=%q failed: %s", model, res.Err)
-	} else {
-		log.Printf("playground: query model=%q done in %dms (%d tok out)", model, res.WallMs, res.PredictedN)
-	}
-	s.renderFragment(w, "playgroundResult", res)
-}
-
-// playgroundToken returns a valid plaintext bearer token for playground
-// requests, creating one if none exists or the previous one was revoked. It is
-// checked before every request, so a user revoking the token in the UI simply
-// causes a fresh one to be minted on the next query.
-func (s *Server) playgroundToken() (string, error) {
-	s.pgMu.Lock()
-	defer s.pgMu.Unlock()
-
-	// Reuse the in-memory token if it is still valid (not revoked, still exists).
-	if s.pgToken != "" {
-		if tok, err := s.tokens.Lookup(s.pgToken); err == nil && tok != nil {
-			return s.pgToken, nil
-		}
-	}
-
-	// Revoke any stale playground tokens so the token list stays tidy.
-	if list, err := s.tokens.List(); err == nil {
-		for _, t := range list {
-			if t.Name == playgroundTokenName && !t.Revoked {
-				_ = s.tokens.Revoke(t.ID)
-			}
-		}
-	}
-
-	plaintext, _, err := s.tokens.Create(playgroundTokenName)
-	if err != nil {
-		return "", err
-	}
-	s.pgToken = plaintext
-	log.Printf("playground: minted new %q token", playgroundTokenName)
-	return s.pgToken, nil
-}
-
-// queryViaProxy builds an OpenAI chat request, authenticates it with the
-// playground bearer token and invokes the same auth-wrapped chat handler the mux
-// serves to external clients. It never returns an error; failures land in the
-// result's Err field for display.
-func (s *Server) queryViaProxy(model, prompt string) playgroundResult {
-	res := playgroundResult{Model: model}
-
-	token, err := s.playgroundToken()
-	if err != nil {
-		res.Err = "playground token: " + err.Error()
-		return res
-	}
-
-	payload, _ := json.Marshal(map[string]any{
-		"model":    model,
-		"messages": []map[string]string{{"role": "user", "content": prompt}},
-		"stream":   false,
-	})
-	req, err := http.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(payload))
-	if err != nil {
-		res.Err = err.Error()
-		return res
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	rec := &captureRW{}
-	start := time.Now()
-	s.chat.ServeHTTP(rec, req)
-	res.WallMs = time.Since(start).Milliseconds()
-	body := rec.body.Bytes()
-
-	if rec.status >= 400 {
-		res.Err = fmt.Sprintf("status %d: %s", rec.status, strings.TrimSpace(string(body)))
-		return res
-	}
-
-	var cr struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-		Timings struct {
-			PromptN            int     `json:"prompt_n"`
-			PredictedN         int     `json:"predicted_n"`
-			PromptPerSecond    float64 `json:"prompt_per_second"`
-			PredictedPerSecond float64 `json:"predicted_per_second"`
-		} `json:"timings"`
-	}
-	if err := json.Unmarshal(body, &cr); err != nil {
-		res.Err = "decode response: " + err.Error()
-		return res
-	}
-	if len(cr.Choices) > 0 {
-		res.Answer = cr.Choices[0].Message.Content
-	}
-	res.PromptN = cr.Timings.PromptN
-	res.PredictedN = cr.Timings.PredictedN
-	res.PromptPerSec = cr.Timings.PromptPerSecond
-	res.PredictedPerSec = cr.Timings.PredictedPerSecond
-	return res
-}
-
-// captureRW is an in-process http.ResponseWriter that buffers the handler's
-// response so the playground can parse it after the proxy has logged the request.
-type captureRW struct {
-	header http.Header
-	body   bytes.Buffer
-	status int
-}
-
-func (c *captureRW) Header() http.Header {
-	if c.header == nil {
-		c.header = http.Header{}
-	}
-	return c.header
-}
-
-func (c *captureRW) Write(b []byte) (int, error) { return c.body.Write(b) }
-func (c *captureRW) WriteHeader(status int)      { c.status = status }
 
 func (s *Server) renderFragment(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

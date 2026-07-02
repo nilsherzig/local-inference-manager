@@ -210,8 +210,8 @@ func TestInstancesPageShowsConfigAndLogs(t *testing.T) {
 	if !strings.Contains(body, "llama-server --port ${PORT}") {
 		t.Errorf("instances page missing model config: %q", body)
 	}
-	if !strings.Contains(body, "Live instance logs") || !strings.Contains(body, "/instances/logs.txt") {
-		t.Errorf("instances page missing live logs section: %q", body)
+	if !strings.Contains(body, "/instances/logs.txt") {
+		t.Errorf("instances page missing log button: %q", body)
 	}
 	// The page must subscribe to SSE and swap the live model grid + status, so
 	// start/stop is reflected without a reload.

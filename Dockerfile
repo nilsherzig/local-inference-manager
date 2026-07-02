@@ -15,7 +15,10 @@ ARG GIT_COMMIT
 # build needs neither node nor tailwindcss.
 RUN CGO_ENABLED=0 go build -o /lim ./cmd/lim
 
-FROM ghcr.io/ggml-org/llama.cpp:server-vulkan
+# The base image ships /app/llama-server. Defaults to the Vulkan server image;
+# override with LLAMA_IMAGE=...:server-cuda to build the CUDA variant.
+ARG LLAMA_IMAGE=ghcr.io/ggml-org/llama.cpp:server-vulkan
+FROM ${LLAMA_IMAGE}
 
 COPY --from=builder /lim /usr/local/bin/lim
 

@@ -13,8 +13,6 @@
 <div class="rounded-lg border border-slate-800 bg-slate-900 p-4 text-slate-400">No instance running.</div>
 {{end}}{{end}}
 
-{{define "instanceLogs"}}{{if .Running}}<pre class="max-h-96 overflow-auto whitespace-pre-wrap p-2 text-xs text-slate-400">{{.Logs}}</pre>{{else}}<div class="p-2 text-sm text-slate-500">No instance running.</div>{{end}}{{end}}
-
 {{define "modelGrid"}}<div class="grid gap-3 sm:grid-cols-2">
   {{range .}}
   <div class="rounded-lg border {{if .Active}}border-emerald-600{{else}}border-slate-800{{end}} bg-slate-900 p-4">
@@ -29,6 +27,7 @@
         <button class="rounded bg-sky-600 px-3 py-1.5 text-sm hover:bg-sky-500">Start</button>
       </form>
       <a href="/llama-server/{{.Name}}/" target="_blank" class="rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">Open WebUI</a>
+      <a href="/instances/logs.txt" target="_blank" class="rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">Log</a>
     </div>
     {{if .Cmd}}
     <details class="mt-3">

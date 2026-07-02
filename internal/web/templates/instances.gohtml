@@ -10,14 +10,5 @@
   <div id="instance-status" class="mb-4" sse-swap="instances">{{template "instanceStatus" .Snapshot}}</div>
 
   <div id="model-grid" sse-swap="models">{{template "modelGrid" .Models}}</div>
-
-  <div class="mb-2 mt-6 flex items-center justify-between">
-    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Live instance logs</h2>
-    <a href="/instances/logs.txt" target="_blank" class="text-xs text-sky-400 hover:text-sky-300">Open fullscreen ↗</a>
-  </div>
-  <div hx-get="/instances/logs" hx-trigger="load, every 2s" hx-swap="innerHTML"
-       class="rounded-lg border border-slate-800 bg-slate-900">
-    {{template "instanceLogs" .Snapshot}}
-  </div>
 </div>
 {{end}}

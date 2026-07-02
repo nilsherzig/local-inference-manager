@@ -93,7 +93,6 @@ func (s *Server) Routes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /{$}", s.dashboard)
 	mux.HandleFunc("GET /instances", s.instances)
-	mux.HandleFunc("GET /instances/logs", s.instanceLogs)
 	mux.HandleFunc("GET /instances/logs.txt", s.instanceLogsText)
 	mux.HandleFunc("POST /instances/{model}/start", s.startInstance)
 	mux.HandleFunc("POST /instances/stop", s.stopInstance)
@@ -154,12 +153,6 @@ func (s *Server) instances(w http.ResponseWriter, r *http.Request) {
 		"Models":   s.modelStatuses(),
 		"Snapshot": s.mgr.Snapshot(),
 	})
-}
-
-// instanceLogs renders the live process log fragment for the running instance.
-// The instances page polls this endpoint (htmx) to keep the log fresh.
-func (s *Server) instanceLogs(w http.ResponseWriter, r *http.Request) {
-	s.renderFragment(w, "instanceLogs", s.mgr.Snapshot())
 }
 
 // instanceLogsText serves the current process log as a plain-text snapshot, so
@@ -294,13 +287,6 @@ func (s *Server) playground(w http.ResponseWriter, r *http.Request) {
 		"Models":  s.cfg.ModelNames(),
 		"BaseURL": auth.BaseURL(r),
 	})
-}
-
-func (s *Server) renderFragment(w http.ResponseWriter, name string, data any) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := s.fragments.ExecuteTemplate(w, name, data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 }
 
 func (s *Server) requestDetail(w http.ResponseWriter, r *http.Request) {

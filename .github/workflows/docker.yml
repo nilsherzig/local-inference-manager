@@ -13,9 +13,6 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   IMAGE_TAG: sha-${{ github.sha }}
-  HOMELAB_REPO: nilsherzig/k3s-homelab
-  HOMELAB_KUSTOMIZATION_FILE: base/dev/kustomization.yaml
-  HOMELAB_IMAGE_NAME: ghcr.io/nilsherzig/local-inference-manager
 
 jobs:
   build-and-push:
@@ -24,6 +21,14 @@ jobs:
     permissions:
       contents: read
       packages: write
+
+    strategy:
+      matrix:
+        include:
+          - variant: vulkan
+            llama_image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+          - variant: cuda
+            llama_image: ghcr.io/ggml-org/llama.cpp:server-cuda
 
     steps:
       - uses: actions/checkout@v4
@@ -39,58 +44,14 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ env.IMAGE_TAG }}
-            type=raw,value=latest
+            type=raw,value=${{ env.IMAGE_TAG }}-${{ matrix.variant }}
+            type=raw,value=${{ matrix.variant }}
 
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          build-args: |
+            LLAMA_IMAGE=${{ matrix.llama_image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-  update-homelab:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: ${{ env.HOMELAB_REPO }}
-          token: ${{ secrets.K3S_HOMELAB_PUSH_TOKEN }}
-          path: k3s-homelab
-
-      - name: Update local-inference-manager image tag
-        uses: mikefarah/yq@v4
-        env:
-          HOMELAB_IMAGE_NAME: ${{ env.HOMELAB_IMAGE_NAME }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-        with:
-          cmd: >-
-            yq -i '
-              (.images[] | select(.name == env(HOMELAB_IMAGE_NAME)) | .newTag) = env(IMAGE_TAG)
-            ' "k3s-homelab/${{ env.HOMELAB_KUSTOMIZATION_FILE }}"
-
-      - name: Validate local-inference-manager image tag entry
-        uses: mikefarah/yq@v4
-        env:
-          HOMELAB_IMAGE_NAME: ${{ env.HOMELAB_IMAGE_NAME }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-        with:
-          cmd: >-
-            test "$(yq '.images[] | select(.name == env(HOMELAB_IMAGE_NAME)) | .newTag' "k3s-homelab/${{ env.HOMELAB_KUSTOMIZATION_FILE }}")" = "$IMAGE_TAG"
-
-      - name: Commit and push manifest update
-        working-directory: k3s-homelab
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          if git diff --quiet -- "${{ env.HOMELAB_KUSTOMIZATION_FILE }}"; then
-            exit 0
-          fi
-
-          git add "${{ env.HOMELAB_KUSTOMIZATION_FILE }}"
-          git commit -m "Deploy local-inference-manager ${IMAGE_TAG}"
-          git push

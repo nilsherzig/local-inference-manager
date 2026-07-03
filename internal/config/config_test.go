@@ -113,11 +113,13 @@ func TestNoModels(t *testing.T) {
 	}
 }
 
-func TestHFRepo(t *testing.T) {
+func TestHFRepos(t *testing.T) {
 	yaml := `
 models:
   hf:
     cmd: "llama-server --port ${PORT} -hf unsloth/gemma:Q4_K_M"
+  draft:
+    cmd: "llama-server --port ${PORT} -hf unsloth/gemma:Q4_K_M -hfd williamliao/gemma-DFlash:Q4_K_M"
   local:
     cmd: "llama-server --port ${PORT} -m /models/gemma.gguf"
 `
@@ -127,15 +129,20 @@ models:
 	}
 
 	// Positive: -hf value is extracted.
-	if repo, ok := c.HFRepo("hf"); !ok || repo != "unsloth/gemma:Q4_K_M" {
-		t.Errorf("HFRepo(hf) = %q, %v; want unsloth/gemma:Q4_K_M, true", repo, ok)
+	if repos := c.HFRepos("hf"); len(repos) != 1 || repos[0] != "unsloth/gemma:Q4_K_M" {
+		t.Errorf("HFRepos(hf) = %v; want [unsloth/gemma:Q4_K_M]", repos)
 	}
-	// Negative: a local model has no repo.
-	if repo, ok := c.HFRepo("local"); ok {
-		t.Errorf("HFRepo(local) = %q, %v; want ok=false", repo, ok)
+	// Positive: both -hf and -hfd (draft) repos are extracted.
+	if repos := c.HFRepos("draft"); len(repos) != 2 ||
+		repos[0] != "unsloth/gemma:Q4_K_M" || repos[1] != "williamliao/gemma-DFlash:Q4_K_M" {
+		t.Errorf("HFRepos(draft) = %v; want [unsloth/gemma:Q4_K_M williamliao/gemma-DFlash:Q4_K_M]", repos)
+	}
+	// Negative: a local model has no repos.
+	if repos := c.HFRepos("local"); repos != nil {
+		t.Errorf("HFRepos(local) = %v; want nil", repos)
 	}
 	// Negative: unknown model.
-	if _, ok := c.HFRepo("nope"); ok {
-		t.Errorf("HFRepo(nope) should report ok=false")
+	if repos := c.HFRepos("nope"); repos != nil {
+		t.Errorf("HFRepos(nope) = %v; want nil", repos)
 	}
 }

@@ -18,13 +18,13 @@ import (
 func (m *Manager) Preload(models []string) {
 	cached := m.cachedRepos(models)
 	for _, name := range models {
-		hf, hasHF := m.cfg.HFRepo(name)
-		if hasHF && repoCached(cached, hf) {
-			log.Printf("preload: %q (%s) already cached, skipping", name, hf)
+		repos := m.cfg.HFRepos(name)
+		if len(repos) > 0 && allCached(cached, repos) {
+			log.Printf("preload: %q (%s) already cached, skipping", name, strings.Join(repos, ", "))
 			continue
 		}
-		if hasHF {
-			log.Printf("preload: downloading %q (%s)", name, hf)
+		if missing := uncached(cached, repos); len(missing) > 0 {
+			log.Printf("preload: downloading %q (%s)", name, strings.Join(missing, ", "))
 		} else {
 			log.Printf("preload: loading %q", name)
 		}
@@ -114,6 +114,27 @@ func (m *Manager) cachedRepos(models []string) map[string]bool {
 		}
 	}
 	return set
+}
+
+// allCached reports whether every repo in repos is present in the cache set.
+func allCached(cached map[string]bool, repos []string) bool {
+	for _, r := range repos {
+		if !repoCached(cached, r) {
+			return false
+		}
+	}
+	return true
+}
+
+// uncached returns the subset of repos missing from the cache set.
+func uncached(cached map[string]bool, repos []string) []string {
+	var missing []string
+	for _, r := range repos {
+		if !repoCached(cached, r) {
+			missing = append(missing, r)
+		}
+	}
+	return missing
 }
 
 // repoCached reports whether hf (repo[:quant]) is present in the cache set.

@@ -56,3 +56,26 @@ func TestRepoCached(t *testing.T) {
 		t.Errorf("unknown repo must not be reported cached")
 	}
 }
+
+func TestAllCachedAndUncached(t *testing.T) {
+	cached := map[string]bool{"main:Q4": true, "draft:Q4": true}
+
+	// Positive: every repo present -> allCached true, uncached empty.
+	repos := []string{"main:Q4", "draft:Q4"}
+	if !allCached(cached, repos) {
+		t.Errorf("allCached should be true when every repo is cached")
+	}
+	if m := uncached(cached, repos); len(m) != 0 {
+		t.Errorf("uncached = %v; want empty", m)
+	}
+
+	// Negative: a missing draft repo (e.g. -hfd not yet downloaded) must fail the
+	// cache check and be reported as the only missing repo.
+	repos = []string{"main:Q4", "draft:Q5"}
+	if allCached(cached, repos) {
+		t.Errorf("allCached should be false when a repo is missing")
+	}
+	if m := uncached(cached, repos); len(m) != 1 || m[0] != "draft:Q5" {
+		t.Errorf("uncached = %v; want [draft:Q5]", m)
+	}
+}

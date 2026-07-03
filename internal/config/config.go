@@ -135,24 +135,31 @@ func (c *Config) Args(canonical, port string) ([]string, error) {
 	return fields, nil
 }
 
-// HFRepo returns the HuggingFace repo[:quant] a model downloads, parsed from its
-// cmd (-hf / -hfr / --hf-repo). ok is false when the model loads from a local
-// path or url instead, so preload can skip cache detection for it.
-func (c *Config) HFRepo(canonical string) (repo string, ok bool) {
+// hfRepoFlags are every llama-server flag whose value is a HuggingFace
+// repo[:quant] that gets downloaded at startup: the main model, the draft model
+// used for speculative decoding, and the vocoder model.
+var hfRepoFlags = map[string]bool{
+	"-hf": true, "-hfr": true, "--hf-repo": true,
+	"-hfd": true, "-hfrd": true, "--hf-repo-draft": true, "--spec-draft-hf": true,
+	"-hfv": true, "-hfrv": true, "--hf-repo-v": true,
+}
+
+// HFRepos returns every HuggingFace repo[:quant] a model downloads, parsed from
+// its cmd (see hfRepoFlags). The result is nil when the model loads only from
+// local paths or urls, so preload can skip cache detection for it.
+func (c *Config) HFRepos(canonical string) []string {
 	m, exists := c.Models[canonical]
 	if !exists {
-		return "", false
+		return nil
 	}
+	var repos []string
 	fields := strings.Fields(m.Cmd)
 	for i, f := range fields {
-		switch f {
-		case "-hf", "-hfr", "--hf-repo":
-			if i+1 < len(fields) {
-				return fields[i+1], true
-			}
+		if hfRepoFlags[f] && i+1 < len(fields) {
+			repos = append(repos, fields[i+1])
 		}
 	}
-	return "", false
+	return repos
 }
 
 // ModelNames returns the canonical model names, unsorted.

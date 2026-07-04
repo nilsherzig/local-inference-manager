@@ -5,7 +5,8 @@
 # Base image is selectable: defaults to the Vulkan server image; override with
 # LLAMA_IMAGE=...:server-cuda to build the CUDA variant. A global ARG (declared
 # before the first FROM) is the only kind usable in a later FROM.
-ARG LLAMA_IMAGE=ghcr.io/ggml-org/llama.cpp:server-vulkan
+# ARG LLAMA_IMAGE=ghcr.io/ggml-org/llama.cpp:server-vulkan
+ARG LLAMA_IMAGE=ghcr.io/anbeeld/beellama.cpp:server-vulkan
 
 FROM golang:1.26-alpine AS builder
 

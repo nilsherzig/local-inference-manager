@@ -36,13 +36,13 @@ models:
       /app/llama-server
       --host 127.0.0.1
       --port ${PORT}
+      -np 1
       -ngl 99
       --jinja
       --metrics
       --flash-attn on
       --cache-type-k q8_0
       --cache-type-v q8_0
-      --cache-reuse 256
       --kv-unified
       --no-mmap
       --no-host

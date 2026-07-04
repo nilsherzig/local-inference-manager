@@ -1,5 +1,5 @@
 manager:
-  listen: "127.0.0.1:8080"
+  listen: "0.0.0.0:8080"
   db_path: "./lim.db"
   default_ttl: 300 # idle seconds before an instance is stopped
   health_timeout: 300 # max seconds to wait for /health (cold start + model download)
@@ -11,7 +11,7 @@ manager:
 models:
   gemma-4-e4b:
     cmd: |
-      llama-server
+      /app/llama-server
       --cache-reuse 256
       --cache-type-k q8_0
       --cache-type-v q8_0

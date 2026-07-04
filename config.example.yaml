@@ -21,6 +21,7 @@ models:
       --metrics
       --no-mmap
       --port ${PORT}
+      --ui-mcp-proxy
       -fa on
       -hf unsloth/gemma-4-E4B-it-qat-GGUF:UD-Q4_K_XL
       -ngl 99
@@ -44,6 +45,7 @@ models:
       --port ${PORT}
       --spec-draft-n-max 4
       --spec-type draft-dflash
+      --webui-mcp-proxy
       -fa on
       -hf unsloth/gemma-4-12b-it-GGUF:Q4_K_M
       -hfd williamliao/gemma-4-12B-it-DFlash-GGUF:Q4_K_M

@@ -31,26 +31,38 @@ models:
       - gemma-4
       - gemma-4-e4b-it
 
-  gemma-4-12b:
+  qwen3.6-27b:
     cmd: |
-      llama-server
-      --cache-reuse 256
-      --cache-type-k q8_0
-      --cache-type-v q8_0
-      --ctx-size 65536
+      /app/llama-server
       --host 127.0.0.1
+      --port ${PORT}
+      -ngl 99
       --jinja
       --metrics
+      --flash-attn on
+      --cache-type-k q8_0
+      --cache-type-v q8_0
+      --cache-reuse 256
+      --kv-unified
       --no-mmap
-      --port ${PORT}
-      --spec-draft-n-max 4
-      --spec-type draft-dflash
-      --webui-mcp-proxy
-      -fa on
-      -hf unsloth/gemma-4-12b-it-GGUF:Q4_K_M
-      -hfd williamliao/gemma-4-12B-it-DFlash-GGUF:Q4_K_M
-      -ngl 99
+      --no-host
+      -b 2048
+      -ub 512
+      -hf unsloth/Qwen3.6-27B-GGUF:Q4_K_M
+      --spec-type dflash
+      --spec-draft-hf Anbeeld/Qwen3.6-27B-DFlash-GGUF:Q4_K_M
+      --spec-draft-ngl 99
+      --spec-dflash-cross-ctx 1024
+      --ctx-size 131072
+      --temp 0.6
+      --top-k 20
+      --top-p 1.0
+      --min-p 0
+      --reasoning on
+      --chat-template-kwargs {"preserve_thinking":true}
     ttl: 300
     aliases:
-      - gemma-12b
-      - gemma-4-12b-it
+      - qwen
+      - qwen3.6
+      - qwen3.6-27b-dflash
+

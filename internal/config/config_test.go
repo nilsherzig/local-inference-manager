@@ -113,13 +113,35 @@ func TestNoModels(t *testing.T) {
 	}
 }
 
-func TestHFRepos(t *testing.T) {
+func TestParseDownload(t *testing.T) {
+	// Positive: repo:quant splits into both parts.
+	if d := ParseDownload("unsloth/gemma-GGUF:Q4_K_M"); d.Repo != "unsloth/gemma-GGUF" || d.Quant != "Q4_K_M" {
+		t.Errorf("ParseDownload(repo:quant) = %+v", d)
+	}
+	// Positive: unsloth UD- prefixed quant is preserved verbatim.
+	if d := ParseDownload("unsloth/gemma-GGUF:UD-Q4_K_XL"); d.Quant != "UD-Q4_K_XL" {
+		t.Errorf("ParseDownload UD quant = %q; want UD-Q4_K_XL", d.Quant)
+	}
+	// Negative: a bare repo yields an empty quant (whole-repo download).
+	if d := ParseDownload("unsloth/gemma-GGUF"); d.Repo != "unsloth/gemma-GGUF" || d.Quant != "" {
+		t.Errorf("ParseDownload(repo) = %+v; want empty quant", d)
+	}
+}
+
+func TestDownloads(t *testing.T) {
 	yaml := `
+manager:
+  models_dir: /data/models
 models:
-  hf:
-    cmd: "llama-server --port ${PORT} -hf unsloth/gemma:Q4_K_M"
+  main:
+    cmd: "llama-server --port ${PORT} -m /data/models/unsloth/gemma-GGUF/gemma-Q4_K_M.gguf"
+    downloads:
+      - unsloth/gemma-GGUF:Q4_K_M
   draft:
-    cmd: "llama-server --port ${PORT} -hf unsloth/gemma:Q4_K_M -hfd williamliao/gemma-DFlash:Q4_K_M"
+    cmd: "llama-server --port ${PORT} -m a.gguf -md b.gguf"
+    downloads:
+      - unsloth/gemma-GGUF:Q4_K_M
+      - anbeeld/gemma-DFlash-GGUF:Q4_K_M
   local:
     cmd: "llama-server --port ${PORT} -m /models/gemma.gguf"
 `
@@ -128,21 +150,39 @@ models:
 		t.Fatal(err)
 	}
 
-	// Positive: -hf value is extracted.
-	if repos := c.HFRepos("hf"); len(repos) != 1 || repos[0] != "unsloth/gemma:Q4_K_M" {
-		t.Errorf("HFRepos(hf) = %v; want [unsloth/gemma:Q4_K_M]", repos)
+	// Positive: a single download is parsed.
+	if d := c.Downloads("main"); len(d) != 1 || d[0].Repo != "unsloth/gemma-GGUF" || d[0].Quant != "Q4_K_M" {
+		t.Errorf("Downloads(main) = %+v", d)
 	}
-	// Positive: both -hf and -hfd (draft) repos are extracted.
-	if repos := c.HFRepos("draft"); len(repos) != 2 ||
-		repos[0] != "unsloth/gemma:Q4_K_M" || repos[1] != "williamliao/gemma-DFlash:Q4_K_M" {
-		t.Errorf("HFRepos(draft) = %v; want [unsloth/gemma:Q4_K_M williamliao/gemma-DFlash:Q4_K_M]", repos)
+	// Positive: a model may declare several entries (main + draft), order kept.
+	if d := c.Downloads("draft"); len(d) != 2 ||
+		d[0].Repo != "unsloth/gemma-GGUF" || d[1].Repo != "anbeeld/gemma-DFlash-GGUF" {
+		t.Errorf("Downloads(draft) = %+v", d)
 	}
-	// Negative: a local model has no repos.
-	if repos := c.HFRepos("local"); repos != nil {
-		t.Errorf("HFRepos(local) = %v; want nil", repos)
+	// Positive: LocalDir nests the repo under models_dir.
+	if got := c.LocalDir("unsloth/gemma-GGUF"); got != "/data/models/unsloth/gemma-GGUF" {
+		t.Errorf("LocalDir = %q", got)
+	}
+	// Negative: a model without a downloads list has none.
+	if d := c.Downloads("local"); d != nil {
+		t.Errorf("Downloads(local) = %+v; want nil", d)
 	}
 	// Negative: unknown model.
-	if repos := c.HFRepos("nope"); repos != nil {
-		t.Errorf("HFRepos(nope) = %v; want nil", repos)
+	if d := c.Downloads("nope"); d != nil {
+		t.Errorf("Downloads(nope) = %+v; want nil", d)
+	}
+}
+
+func TestDownloadRepoValidation(t *testing.T) {
+	// Negative: a download entry that is not org/name is rejected at load.
+	yaml := `
+models:
+  bad:
+    cmd: "llama-server --port ${PORT} -m x.gguf"
+    downloads:
+      - notarepo:Q4_K_M
+`
+	if _, err := Load(writeTemp(t, yaml)); err == nil || !strings.Contains(err.Error(), "org/name") {
+		t.Errorf("expected org/name validation error, got %v", err)
 	}
 }

@@ -6,6 +6,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -25,17 +26,38 @@ type Config struct {
 type Manager struct {
 	Listen          string `yaml:"listen"`
 	DBPath          string `yaml:"db_path"`
+	ModelsDir       string `yaml:"models_dir"`     // where `downloads` land: <models_dir>/<repo>/<file>
 	DefaultTTL      int    `yaml:"default_ttl"`    // idle seconds before an instance is stopped
 	HealthTimeout   int    `yaml:"health_timeout"` // max seconds to wait for /health
 	LogRequestsBody bool   `yaml:"log_requests_body"`
 }
 
 // Model is a single llama-server configuration. Cmd is the exact command line a
-// power user would run, with ${PORT} substituted per instance.
+// power user would run, with ${PORT} substituted per instance. Downloads lists
+// the HuggingFace repos lim fetches with the CLI before serving; the cmd
+// references the resulting files with explicit -m / -md / --mmproj paths under
+// <models_dir>/<repo>/.
 type Model struct {
-	Cmd     string   `yaml:"cmd"`
-	TTL     int      `yaml:"ttl"`
-	Aliases []string `yaml:"aliases"`
+	Cmd       string   `yaml:"cmd"`
+	TTL       int      `yaml:"ttl"`
+	Aliases   []string `yaml:"aliases"`
+	Downloads []string `yaml:"downloads"`
+}
+
+// Download is a parsed entry from a model's `downloads` list. Repo is the
+// HuggingFace org/name; Quant is the optional tag after the colon (e.g.
+// "Q4_K_M"), empty when the whole repo is fetched. This is the same repo:quant
+// shorthand llama-server's -hf flag accepts.
+type Download struct {
+	Repo  string
+	Quant string
+}
+
+// ParseDownload splits a "repo:quant" entry. A missing ":quant" leaves Quant
+// empty, which means the whole repo is downloaded.
+func ParseDownload(entry string) Download {
+	repo, quant, _ := strings.Cut(entry, ":")
+	return Download{Repo: strings.TrimSpace(repo), Quant: strings.TrimSpace(quant)}
 }
 
 // Load reads, parses and validates the config at path.
@@ -67,6 +89,9 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Manager.DBPath == "" {
 		c.Manager.DBPath = "./lim.db"
+	}
+	if c.Manager.ModelsDir == "" {
+		c.Manager.ModelsDir = "./models"
 	}
 	if c.Manager.DefaultTTL == 0 {
 		c.Manager.DefaultTTL = 300
@@ -100,6 +125,11 @@ func (c *Config) validate() error {
 	for name, m := range c.Models {
 		if strings.TrimSpace(m.Cmd) == "" {
 			return fmt.Errorf("model %q: empty cmd", name)
+		}
+		for _, d := range c.Downloads(name) {
+			if !strings.Contains(d.Repo, "/") {
+				return fmt.Errorf("model %q: download %q is not a HuggingFace org/name repo", name, d.Repo)
+			}
 		}
 	}
 	return nil
@@ -135,31 +165,30 @@ func (c *Config) Args(canonical, port string) ([]string, error) {
 	return fields, nil
 }
 
-// hfRepoFlags are every llama-server flag whose value is a HuggingFace
-// repo[:quant] that gets downloaded at startup: the main model, the draft model
-// used for speculative decoding, and the vocoder model.
-var hfRepoFlags = map[string]bool{
-	"-hf": true, "-hfr": true, "--hf-repo": true,
-	"-hfd": true, "-hfrd": true, "--hf-repo-draft": true, "--spec-draft-hf": true,
-	"-hfv": true, "-hfrv": true, "--hf-repo-v": true,
-}
-
-// HFRepos returns every HuggingFace repo[:quant] a model downloads, parsed from
-// its cmd (see hfRepoFlags). The result is nil when the model loads only from
-// local paths or urls, so preload can skip cache detection for it.
-func (c *Config) HFRepos(canonical string) []string {
+// Downloads returns the parsed HuggingFace download entries for a model. The
+// result is nil when the model has no `downloads` list, meaning its -m paths are
+// expected to already exist on disk and preload can skip it. A single model may
+// list several entries (e.g. a main model plus a speculative-decoding drafter or
+// a multimodal projector).
+func (c *Config) Downloads(canonical string) []Download {
 	m, exists := c.Models[canonical]
 	if !exists {
 		return nil
 	}
-	var repos []string
-	fields := strings.Fields(m.Cmd)
-	for i, f := range fields {
-		if hfRepoFlags[f] && i+1 < len(fields) {
-			repos = append(repos, fields[i+1])
+	var out []Download
+	for _, e := range m.Downloads {
+		if strings.TrimSpace(e) == "" {
+			continue
 		}
+		out = append(out, ParseDownload(e))
 	}
-	return repos
+	return out
+}
+
+// LocalDir is where a repo's files are downloaded: <models_dir>/<repo>. A
+// model's cmd must point its -m / -md / --mmproj flags inside this directory.
+func (c *Config) LocalDir(repo string) string {
+	return filepath.Join(c.Manager.ModelsDir, repo)
 }
 
 // ModelNames returns the canonical model names, unsorted.

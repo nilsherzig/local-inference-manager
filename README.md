@@ -21,7 +21,7 @@ In this demo you can see me create a new auth token and send an example request 
 - on demand instance start, no need to send an extra start request
 - auth tokens with per token logs & metrics
 - config has zero abstraction, all llama-server args are visible. you can use your existing configs
-- on demand model downloads handled by llama-server, no useless lock-in stuff 
+- models are pre-downloaded with the HuggingFace CLI (fast `hf_transfer` backend, progress bar) and loaded with explicit `-m` paths
 - supports multiple alias names for your models
 - run with `--show-llama-logs` to get the full llama-server logs to stdout, nothing is hidden
 - the proxy webinterface works on mobile
@@ -34,8 +34,16 @@ Please check [example config](./config.example.yaml) for more details.
 Here is a config for qwen3.6 27b, as you can see this project is truely just a manager and doesnt try to replace anything. Feel free to use the most cursed llama-server args someone told you in a dream:
 
 ```yaml
+manager:
+  # where downloads land: <models_dir>/<repo>/<file>. In the container this is a
+  # mounted volume so downloads survive restarts.
+  models_dir: "/data/models"
 models:
   qwen3.6-27b:
+    # lim pre-downloads these repos with the HuggingFace CLI before serving
+    # (repo:quant, same shorthand as -hf). Load them with explicit -m paths.
+    downloads:
+      - unsloth/Qwen3.6-27B-MTP-GGUF:Q4_K_M
     cmd: |
       /app/llama-server
       --host 127.0.0.1
@@ -49,7 +57,7 @@ models:
       --cache-reuse 256
       --no-mmap
       --spec-type draft-mtp
-      -hf unsloth/Qwen3.6-27B-MTP-GGUF:Q4_K_M
+      -m /data/models/unsloth/Qwen3.6-27B-MTP-GGUF/Qwen3.6-27B-MTP-GGUF-Q4_K_M.gguf
       --spec-draft-n-max 2
       --ctx-size 131072
       --temp 0.6
@@ -64,6 +72,15 @@ models:
       - qwen3.6
       - qwen3.6-27b-mtp
 ```
+
+Downloads use the fast `hf_transfer` backend (chunked, parallel — see the
+[reddit writeup](https://www.reddit.com/r/LocalLLaMA/comments/1ise5ly/)) and show
+a progress bar during startup. A model may list several `downloads` entries when
+its llama-server config needs more than one file — a main model plus a
+speculative-decoding drafter (`-md`), or a multimodal projector (`--mmproj`). See
+the [example config](./config.example.yaml) for a drafter setup. The exact `.gguf`
+filename for `-m` is whatever the repo ships; after the first download run
+`ls <models_dir>/<repo>/` to see it.
 
 ## Install / Deploy
 

@@ -44,6 +44,11 @@ type Manager struct {
 
 	// streamLogs mirrors instance stdout/stderr to os.Stdout/os.Stderr.
 	streamLogs bool
+
+	// downloader fetches one HuggingFace entry during preload. It is a field so
+	// tests can substitute a fake without spawning huggingface-cli. Defaults to
+	// m.hfDownload.
+	downloader func(config.Download) error
 }
 
 // Option configures a Manager.
@@ -75,6 +80,7 @@ func New(cfg *config.Config, bus Publisher, opts ...Option) *Manager {
 		bus:    bus,
 		client: &http.Client{Timeout: 5 * time.Second},
 	}
+	m.downloader = m.hfDownload
 	for _, o := range opts {
 		o(m)
 	}

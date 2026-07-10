@@ -1,37 +1,28 @@
 manager:
   listen: "0.0.0.0:8080"
   db_path: "./lim.db"
+  # Where `downloads` land: <models_dir>/<repo>/<file>. In the container WORKDIR
+  # is /data (a mounted volume), so ./models resolves to /data/models and
+  # survives restarts. The -m / -md / --mmproj paths below must point in here.
+  models_dir: "/data/models"
   default_ttl: 300 # idle seconds before an instance is stopped
-  health_timeout: 300 # max seconds to wait for /health (cold start + model download)
+  health_timeout: 300 # max seconds to wait for /health (cold start)
   log_requests_body: true # store request/response bodies (grows the DB)
 
 # Each model carries its own full llama-server command line. There are no macros:
 # to add a model, copy a whole block and edit it. ${PORT} is the only
 # substitution — the manager assigns a free port per instance.
+#
+# Models are NOT downloaded by llama-server. Instead, lim pre-downloads the repos
+# in `downloads` with the HuggingFace CLI (fast hf_transfer backend, progress
+# bar) before serving, and you load them with explicit -m / -md / --mmproj paths.
+# `downloads` uses the same repo:quant shorthand as llama-server's -hf; lim
+# fetches the matching *<quant>*.gguf shards into <models_dir>/<repo>/. After the
+# first download, `ls <models_dir>/<repo>/` shows the exact filename to use in -m.
 models:
-  gemma-4-e4b:
-    cmd: |
-      /app/llama-server
-      --cache-reuse 256
-      --cache-type-k q8_0
-      --cache-type-v q8_0
-      --ctx-size 90000
-      --host 127.0.0.1
-      --jinja
-      --metrics
-      --no-mmap
-      --port ${PORT}
-      --ui-mcp-proxy
-      -fa on
-      -hf unsloth/gemma-4-E4B-it-qat-GGUF:UD-Q4_K_XL
-      -ngl 99
-    ttl: 300
-    aliases:
-      - gemma
-      - gemma-4
-      - gemma-4-e4b-it
-
   qwen3.6-27b:
+    downloads:
+      - unsloth/Qwen3.6-27B-MTP-GGUF:Q4_K_M
     cmd: |
       /app/llama-server
       --host 127.0.0.1
@@ -40,19 +31,49 @@ models:
       -ngl 99
       --jinja
       --metrics
+      -fa on
+      --cache-type-k q8_0
+      --cache-type-v q8_0
+      --cache-reuse 256
+      --no-mmap
+      -m /data/models/unsloth/Qwen3.6-27B-MTP-GGUF/Qwen3.6-27B-MTP-GGUF-Q4_K_M.gguf
+      --spec-type draft-mtp
+      --spec-draft-n-max 2
+      --ctx-size 131072
+      --temp 0.6
+      --top-p 0.95
+      --top-k 20
+      --min-p 0
+      --reasoning-preserve
+      --repeat-penalty 1
+    ttl: 300
+    aliases:
+      - qwen
+      - qwen3.6
+      - qwen3.6-27b-mtp
+
+  # A model that needs more than one file: a main model plus a separate drafter
+  # for speculative decoding. List both under `downloads`; llama-server loads the
+  # main with -m and the drafter with -md, both from their local paths.
+  qwen3.6-27b-dflash:
+    downloads:
+      - unsloth/Qwen3.6-27B-GGUF:Q4_K_M
+      - Anbeeld/Qwen3.6-27B-DFlash-GGUF:Q4_K_M
+    cmd: |
+      /app/llama-server
+      --host 127.0.0.1
+      --port ${PORT}
+      -ngl 99
+      --jinja
+      --metrics
       --flash-attn on
       --cache-type-k q8_0
       --cache-type-v q8_0
-      --kv-unified
       --no-mmap
-      --no-host
-      -b 2048
-      -ub 512
-      -hf unsloth/Qwen3.6-27B-GGUF:Q4_K_M
+      -m /data/models/unsloth/Qwen3.6-27B-GGUF/Qwen3.6-27B-GGUF-Q4_K_M.gguf
       --spec-type dflash
-      --spec-draft-hf Anbeeld/Qwen3.6-27B-DFlash-GGUF:Q4_K_M
+      -md /data/models/Anbeeld/Qwen3.6-27B-DFlash-GGUF/Qwen3.6-27B-DFlash-GGUF-Q4_K_M.gguf
       --spec-draft-ngl 99
-      --spec-dflash-cross-ctx 1024
       --ctx-size 131072
       --temp 0.6
       --top-k 20
@@ -62,7 +83,4 @@ models:
       --chat-template-kwargs {"preserve_thinking":true}
     ttl: 300
     aliases:
-      - qwen
-      - qwen3.6
-      - qwen3.6-27b-dflash
-
+      - dflash

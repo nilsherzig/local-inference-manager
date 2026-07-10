@@ -27,7 +27,7 @@ import (
 func main() {
 	cfgPath := flag.String("config", "config.yaml", "path to the YAML config file")
 	showLlamaLogs := flag.Bool("show-llama-logs", false, "mirror each instance's stdout/stderr to this process, prefixed with [model]")
-	preload := flag.Bool("preload", true, "download and validate every configured model at startup, before serving")
+	preload := flag.Bool("preload", true, "pre-download every configured model's files at startup, before serving")
 	flag.Parse()
 
 	cfg, err := config.Load(*cfgPath)
@@ -52,12 +52,12 @@ func main() {
 	}
 	mgr := manager.New(cfg, &publisher{bus: bus, mets: mets, cfg: cfg}, mgrOpts...)
 
-	// Download/validate all models before serving, so downloads are visible up
-	// front instead of blocking the first user request.
+	// Pre-download all model files before serving, so downloads are visible up
+	// front (with a progress bar) instead of blocking the first user request.
 	if *preload {
-		log.Printf("preload: checking %d configured model(s) before serving", len(cfg.Models))
+		log.Printf("preload: fetching files for %d configured model(s) before serving", len(cfg.Models))
 		mgr.Preload(cfg.ModelNames())
-		log.Println("preload: all models ready")
+		log.Println("preload: all downloads complete")
 	}
 
 	mux := http.NewServeMux()

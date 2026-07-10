@@ -1,81 +1,85 @@
 package manager
 
 import (
-	"os"
+	"fmt"
+	"reflect"
 	"testing"
+
+	"github.com/nilsherzig/local-inference-manager/internal/config"
 )
 
-// testBinCmd is a cmd that re-execs the test binary as a fake healthy server.
-func testBinCmd() string {
-	os.Setenv("LIM_HELPER", "1")
-	return os.Args[0] + " -test.run=TestHelperProcess -- --port ${PORT}"
+func TestDownloadArgs(t *testing.T) {
+	// Positive: a quant becomes an --include glob so only matching shards pull.
+	got := downloadArgs(config.Download{Repo: "org/x-GGUF", Quant: "Q4_K_M"}, "/models/org/x-GGUF")
+	want := []string{"download", "org/x-GGUF", "--local-dir", "/models/org/x-GGUF", "--include", "*Q4_K_M*.gguf"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("downloadArgs with quant = %v; want %v", got, want)
+	}
+
+	// Negative: no quant -> whole repo, no --include filter.
+	got = downloadArgs(config.Download{Repo: "org/x-GGUF"}, "/models/org/x-GGUF")
+	want = []string{"download", "org/x-GGUF", "--local-dir", "/models/org/x-GGUF"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("downloadArgs without quant = %v; want %v", got, want)
+	}
 }
 
-func TestPreloadLoadsAndStops(t *testing.T) {
-	m := New(fakeConfig(t, 10, 300, "a", "b"), nil)
-	t.Cleanup(m.Stop)
+func TestPreloadDownloadsEveryEntry(t *testing.T) {
+	// A model may need more than one repo (main + drafter); every entry across
+	// every model must be fetched, in order.
+	cfg := loadConfig(t, "models:\n"+
+		"  a:\n    cmd: \"x\"\n    downloads: [\"org/a-GGUF:Q4\"]\n"+
+		"  b:\n    cmd: \"y\"\n    downloads: [\"org/b-GGUF:Q4\", \"org/b-draft-GGUF:Q4\"]\n")
+	m := New(cfg, nil)
 
-	// Positive: preloading healthy models completes and leaves nothing running,
-	// since each model is stopped again after its health check passes.
+	var got []string
+	m.downloader = func(d config.Download) error {
+		got = append(got, downloadDesc(d))
+		return nil
+	}
 	m.Preload([]string{"a", "b"})
-	if s := m.Snapshot(); s.Running {
-		t.Errorf("instance still running after preload: %+v", s)
+
+	want := []string{"org/a-GGUF:Q4", "org/b-GGUF:Q4", "org/b-draft-GGUF:Q4"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("downloaded = %v; want %v", got, want)
+	}
+}
+
+func TestPreloadSkipsModelsWithoutDownloads(t *testing.T) {
+	// Negative: a model whose -m paths are already on disk (no downloads) must
+	// not trigger any download.
+	cfg := loadConfig(t, "models:\n  a:\n    cmd: \"x\"\n")
+	m := New(cfg, nil)
+
+	called := false
+	m.downloader = func(d config.Download) error { called = true; return nil }
+	m.Preload([]string{"a"})
+
+	if called {
+		t.Errorf("model without downloads must not trigger a download")
 	}
 }
 
 func TestPreloadContinuesOnFailure(t *testing.T) {
-	// "bad" never serves /health (health_timeout 1s) and must not hang preload or
-	// leave a dangling instance; "a" is healthy and still gets preloaded.
-	cfg := loadConfig(t, "manager:\n  health_timeout: 1\nmodels:\n"+
-		"  bad:\n    cmd: \"sleep 5\"\n"+
-		"  a:\n    cmd: \""+testBinCmd()+"\"\n")
+	// A failing download must not abort preload: the failing model is logged and
+	// the next model is still attempted.
+	cfg := loadConfig(t, "models:\n"+
+		"  bad:\n    cmd: \"x\"\n    downloads: [\"org/bad-GGUF:Q4\"]\n"+
+		"  a:\n    cmd: \"y\"\n    downloads: [\"org/a-GGUF:Q4\"]\n")
 	m := New(cfg, nil)
-	t.Cleanup(m.Stop)
 
+	var attempted []string
+	m.downloader = func(d config.Download) error {
+		attempted = append(attempted, d.Repo)
+		if d.Repo == "org/bad-GGUF" {
+			return fmt.Errorf("boom")
+		}
+		return nil
+	}
 	m.Preload([]string{"bad", "a"})
-	if s := m.Snapshot(); s.Running {
-		t.Errorf("instance still running after preload: %+v", s)
-	}
-}
 
-func TestRepoCached(t *testing.T) {
-	cached := map[string]bool{
-		"unsloth/gemma-4-12b-it-GGUF:Q4_K_M":      true,
-		"unsloth/gemma-4-E4B-it-qat-GGUF:Q4_K_XL": true,
-	}
-	// Positive: exact match.
-	if !repoCached(cached, "unsloth/gemma-4-12b-it-GGUF:Q4_K_M") {
-		t.Errorf("exact repo should be reported cached")
-	}
-	// Positive: config keeps unsloth's UD- prefix that --cache-list drops.
-	if !repoCached(cached, "unsloth/gemma-4-E4B-it-qat-GGUF:UD-Q4_K_XL") {
-		t.Errorf("UD- prefixed quant should match its normalized cache entry")
-	}
-	// Negative: unknown repo.
-	if repoCached(cached, "unsloth/other-GGUF:Q4_K_M") {
-		t.Errorf("unknown repo must not be reported cached")
-	}
-}
-
-func TestAllCachedAndUncached(t *testing.T) {
-	cached := map[string]bool{"main:Q4": true, "draft:Q4": true}
-
-	// Positive: every repo present -> allCached true, uncached empty.
-	repos := []string{"main:Q4", "draft:Q4"}
-	if !allCached(cached, repos) {
-		t.Errorf("allCached should be true when every repo is cached")
-	}
-	if m := uncached(cached, repos); len(m) != 0 {
-		t.Errorf("uncached = %v; want empty", m)
-	}
-
-	// Negative: a missing draft repo (e.g. -hfd not yet downloaded) must fail the
-	// cache check and be reported as the only missing repo.
-	repos = []string{"main:Q4", "draft:Q5"}
-	if allCached(cached, repos) {
-		t.Errorf("allCached should be false when a repo is missing")
-	}
-	if m := uncached(cached, repos); len(m) != 1 || m[0] != "draft:Q5" {
-		t.Errorf("uncached = %v; want [draft:Q5]", m)
+	want := []string{"org/bad-GGUF", "org/a-GGUF"}
+	if !reflect.DeepEqual(attempted, want) {
+		t.Errorf("attempted = %v; want %v (preload must continue past a failure)", attempted, want)
 	}
 }

@@ -21,7 +21,7 @@ In this demo you can see me create a new auth token and send an example request 
 - on demand instance start, no need to send an extra start request
 - auth tokens with per token logs & metrics
 - config has zero abstraction, all llama-server args are visible. you can use your existing configs
-- models are pre-downloaded with the HuggingFace CLI (fast `hf_transfer` backend, progress bar) and loaded with explicit `-m` paths
+- models are pre-downloaded with the `hf` CLI (fast Xet backend, progress bar) and loaded with explicit `-m` paths
 - supports multiple alias names for your models
 - run with `--show-llama-logs` to get the full llama-server logs to stdout, nothing is hidden
 - the proxy webinterface works on mobile
@@ -70,9 +70,9 @@ models:
       - qwen3.6-27b
 ```
 
-Downloads use the fast `hf_transfer` backend (chunked, parallel — see the
-[reddit writeup](https://www.reddit.com/r/LocalLLaMA/comments/1ise5ly/)) and show
-a progress bar during startup. A model may list several `downloads` entries when
+Downloads use the fast Xet backend (content-defined chunks, fetched in parallel;
+the successor to `hf_transfer`) and show a progress bar during startup. A model
+may list several `downloads` entries when
 its llama-server config needs more than one file — a main model plus a
 speculative-decoding drafter (`-md`), or a multimodal projector (`--mmproj`). See
 the [example config](./config.example.yaml) for a drafter setup. The exact `.gguf`

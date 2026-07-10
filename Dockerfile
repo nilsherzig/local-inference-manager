@@ -24,17 +24,17 @@ RUN CGO_ENABLED=0 go build -o /lim ./cmd/lim
 
 FROM ${LLAMA_IMAGE}
 
-# lim pre-downloads models with the HuggingFace CLI (not llama-server's built-in
-# -hf). hf_transfer is the Rust backend that chunks each file and pulls the
+# lim pre-downloads models with the `hf` CLI (not llama-server's built-in -hf).
+# hf_xet is the high-performance backend that chunks each file and pulls the
 # chunks in parallel, lifting the ~10MB/s single-stream cap to >1GB/s. Install
-# both into a venv so PEP 668 (externally-managed-environment) never bites, and
-# put the venv first on PATH so `huggingface-cli` resolves to it.
+# into a venv so PEP 668 (externally-managed-environment) never bites, and put
+# the venv first on PATH so `hf` resolves to it.
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv \
     && python3 -m venv /opt/hf \
-    && /opt/hf/bin/pip install --no-cache-dir "huggingface_hub[cli]" hf_transfer \
+    && /opt/hf/bin/pip install --no-cache-dir "huggingface_hub[cli,hf_xet]" \
     && rm -rf /var/lib/apt/lists/*
 ENV PATH=/opt/hf/bin:$PATH
-ENV HF_HUB_ENABLE_HF_TRANSFER=1
+ENV HF_XET_HIGH_PERFORMANCE=1
 
 COPY --from=builder /lim /usr/local/bin/lim
 

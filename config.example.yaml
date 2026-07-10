@@ -14,7 +14,7 @@ manager:
 # substitution — the manager assigns a free port per instance.
 #
 # Models are NOT downloaded by llama-server. Instead, lim pre-downloads the repos
-# in `downloads` with the HuggingFace CLI (fast hf_transfer backend, progress
+# in `downloads` with the `hf` CLI (fast Xet backend, progress
 # bar) before serving, and you load them with explicit -m / -md / --mmproj paths.
 # `downloads` uses the same repo:quant shorthand as llama-server's -hf; lim
 # fetches the matching *<quant>*.gguf shards into <models_dir>/<repo>/. After the

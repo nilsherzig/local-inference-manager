@@ -141,7 +141,7 @@ models:
     cmd: "llama-server --port ${PORT} -m a.gguf -md b.gguf"
     downloads:
       - unsloth/gemma-GGUF:Q4_K_M
-      - anbeeld/gemma-DFlash-GGUF:Q4_K_M
+      - unsloth/gemma-draft-GGUF:Q4_K_M
   local:
     cmd: "llama-server --port ${PORT} -m /models/gemma.gguf"
 `
@@ -156,7 +156,7 @@ models:
 	}
 	// Positive: a model may declare several entries (main + draft), order kept.
 	if d := c.Downloads("draft"); len(d) != 2 ||
-		d[0].Repo != "unsloth/gemma-GGUF" || d[1].Repo != "anbeeld/gemma-DFlash-GGUF" {
+		d[0].Repo != "unsloth/gemma-GGUF" || d[1].Repo != "unsloth/gemma-draft-GGUF" {
 		t.Errorf("Downloads(draft) = %+v", d)
 	}
 	// Positive: LocalDir nests the repo under models_dir.

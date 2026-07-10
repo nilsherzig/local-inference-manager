@@ -3,8 +3,7 @@
 # on demand and proxies OpenAI-compatible requests to it.
 #
 # Base image is selectable: defaults to the upstream Vulkan server image.
-# Override with LLAMA_IMAGE=...:server-cuda for the CUDA variant, or point at the
-# beellama fork (ghcr.io/anbeeld/beellama.cpp:server-*) for the beellama images.
+# Override with LLAMA_IMAGE=...:server-cuda for the CUDA variant.
 # A global ARG (declared before the first FROM) is the only kind usable in a
 # later FROM.
 ARG LLAMA_IMAGE=ghcr.io/ggml-org/llama.cpp:server-vulkan

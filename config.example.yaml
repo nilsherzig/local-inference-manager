@@ -22,7 +22,7 @@ manager:
 models:
   qwen3.6-27b:
     downloads:
-      - unsloth/Qwen3.6-27B-MTP-GGUF:Q4_K_M
+      - unsloth/Qwen3.6-27B-GGUF:Q4_K_M
     cmd: |
       /app/llama-server
       --host 127.0.0.1
@@ -36,29 +36,28 @@ models:
       --cache-type-v q8_0
       --cache-reuse 256
       --no-mmap
-      -m /data/models/unsloth/Qwen3.6-27B-MTP-GGUF/Qwen3.6-27B-MTP-GGUF-Q4_K_M.gguf
-      --spec-type draft-mtp
-      --spec-draft-n-max 2
+      -m /data/models/unsloth/Qwen3.6-27B-GGUF/Qwen3.6-27B-GGUF-Q4_K_M.gguf
       --ctx-size 131072
       --temp 0.6
       --top-p 0.95
       --top-k 20
       --min-p 0
-      --reasoning-preserve
       --repeat-penalty 1
     ttl: 300
     aliases:
       - qwen
       - qwen3.6
-      - qwen3.6-27b-mtp
+      - qwen3.6-27b
 
-  # A model that needs more than one file: a main model plus a separate drafter
-  # for speculative decoding. List both under `downloads`; llama-server loads the
-  # main with -m and the drafter with -md, both from their local paths.
-  qwen3.6-27b-dflash:
+  # A model that needs more than one file: a main model plus a smaller draft
+  # model for speculative decoding. List both under `downloads`; llama-server
+  # loads the main with -m and the drafter with -md, both from their local paths
+  # (-ngld puts the draft's layers on the GPU too). The draft model must share
+  # the main model's tokenizer/vocabulary.
+  qwen3.6-27b-spec:
     downloads:
       - unsloth/Qwen3.6-27B-GGUF:Q4_K_M
-      - Anbeeld/Qwen3.6-27B-DFlash-GGUF:Q4_K_M
+      - unsloth/Qwen3-0.6B-GGUF:Q4_K_M
     cmd: |
       /app/llama-server
       --host 127.0.0.1
@@ -66,21 +65,20 @@ models:
       -ngl 99
       --jinja
       --metrics
-      --flash-attn on
+      -fa on
       --cache-type-k q8_0
       --cache-type-v q8_0
       --no-mmap
       -m /data/models/unsloth/Qwen3.6-27B-GGUF/Qwen3.6-27B-GGUF-Q4_K_M.gguf
-      --spec-type dflash
-      -md /data/models/Anbeeld/Qwen3.6-27B-DFlash-GGUF/Qwen3.6-27B-DFlash-GGUF-Q4_K_M.gguf
-      --spec-draft-ngl 99
+      -md /data/models/unsloth/Qwen3-0.6B-GGUF/Qwen3-0.6B-GGUF-Q4_K_M.gguf
+      -ngld 99
+      --draft-max 16
+      --draft-min 4
       --ctx-size 131072
       --temp 0.6
       --top-k 20
       --top-p 1.0
       --min-p 0
-      --reasoning on
-      --chat-template-kwargs {"preserve_thinking":true}
     ttl: 300
     aliases:
-      - dflash
+      - spec

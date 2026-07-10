@@ -43,7 +43,7 @@ models:
     # lim pre-downloads these repos with the HuggingFace CLI before serving
     # (repo:quant, same shorthand as -hf). Load them with explicit -m paths.
     downloads:
-      - unsloth/Qwen3.6-27B-MTP-GGUF:Q4_K_M
+      - unsloth/Qwen3.6-27B-GGUF:Q4_K_M
     cmd: |
       /app/llama-server
       --host 127.0.0.1
@@ -56,21 +56,18 @@ models:
       --cache-type-v q8_0
       --cache-reuse 256
       --no-mmap
-      --spec-type draft-mtp
-      -m /data/models/unsloth/Qwen3.6-27B-MTP-GGUF/Qwen3.6-27B-MTP-GGUF-Q4_K_M.gguf
-      --spec-draft-n-max 2
+      -m /data/models/unsloth/Qwen3.6-27B-GGUF/Qwen3.6-27B-GGUF-Q4_K_M.gguf
       --ctx-size 131072
       --temp 0.6
       --top-p 0.95
       --top-k 20
       --min-p 0
-      --reasoning-preserve
       --repeat-penalty 1
     ttl: 300
     aliases:
       - qwen
       - qwen3.6
-      - qwen3.6-27b-mtp
+      - qwen3.6-27b
 ```
 
 Downloads use the fast `hf_transfer` backend (chunked, parallel — see the
@@ -94,8 +91,9 @@ ghcr.io/nilsherzig/local-inference-manager:cuda      # NVIDIA (CUDA)
 ghcr.io/nilsherzig/local-inference-manager:vulkan    # anything Vulkan (AMD, Intel, NVIDIA)
 ```
 
-Each variant is also tagged per commit as `sha-<commit>-cuda` / `sha-<commit>-vulkan`
-if you want to pin a specific build. Get a list of every published tag on the
+The `cuda` / `vulkan` tags always point at the latest build. To pin a specific
+build, reference it by digest (`ghcr.io/nilsherzig/local-inference-manager@sha256:...`).
+Get a list of every published tag and digest on the
 [Packages page](https://github.com/nilsherzig/local-inference-manager/pkgs/container/local-inference-manager)
 of the repo.
 

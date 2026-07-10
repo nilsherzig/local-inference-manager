@@ -27,13 +27,6 @@ jobs:
     strategy:
       matrix:
         variant: [vulkan, cuda]
-        backend:
-          # Upstream llama.cpp -> plain variant tags (vulkan, cuda).
-          - image_repo: ghcr.io/ggml-org/llama.cpp
-            tag_suffix: ''
-          # beellama fork -> suffixed tags (vulkan-beellama, cuda-beellama).
-          - image_repo: ghcr.io/anbeeld/beellama.cpp
-            tag_suffix: -beellama
 
     steps:
       - uses: actions/checkout@v4
@@ -49,13 +42,13 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ matrix.variant }}${{ matrix.backend.tag_suffix }}
+            type=raw,value=${{ matrix.variant }}
 
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           build-args: |
-            LLAMA_IMAGE=${{ matrix.backend.image_repo }}:server-${{ matrix.variant }}
+            LLAMA_IMAGE=ghcr.io/ggml-org/llama.cpp:server-${{ matrix.variant }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
